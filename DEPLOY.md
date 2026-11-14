@@ -47,7 +47,7 @@ server {
 | `STORE_NAME` | nama toko (judul halaman, email) |
 | `STORE_BASE_URL` | URL publik API, mis. `https://api.tokokamu.com` — tautan di email |
 | `STORE_CORS_ORIGINS` | origin frontend CF Pages (koma, mis. `https://tokokamu.pages.dev`) |
-| `STORE_SMTP_HOST/PORT/USER/PASS/FROM` | SMTP Brevo: `smtp-relay.brevo.com:587`, user = login SMTP, pass = **SMTP key** |
+| `STORE_SMTP_HOST/PORT/USER/PASS/FROM` | SMTP Brevo: `smtp-relay.brevo.com:587`, user = login SMTP, pass = **SMTP key**. Untuk uji lokal pakai **Mailpit** (`STORE_SMTP_HOST=127.0.0.1 STORE_SMTP_PORT=1025 STORE_SMTP_FROM=dev@toko.local`, lihat email di `http://localhost:8025`) |
 | `STORE_PAYMENT_SECRET` | HMAC webhook adapter kustom (opsional) |
 | `STORE_COOKIE_SECURE` | force cookie Secure (otomatis bila BASE_URL https) |
 | `STORE_COOKIE_SAMESITE` | `none` untuk split-origin (otomatis bila CORS origins diisi), `lax` same-origin |

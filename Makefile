@@ -8,7 +8,8 @@ tidy:
 	go mod tidy && cd web && bun install
 
 run: build
-	STORE_ADDR=:8080 STORE_DEV_LOGIN=1 ./store serve
+	# dev: login-as aktif + SMTP ke Mailpit (UI http://localhost:8025)
+	STORE_ADDR=:8080 STORE_DEV_LOGIN=1 STORE_SMTP_HOST=127.0.0.1 STORE_SMTP_PORT=1025 STORE_SMTP_FROM=dev@toko.local ./store serve
 
 migrate: build
 	./store migrate
