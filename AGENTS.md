@@ -14,6 +14,9 @@ terkirim otomatis ke email pembeli (unduhan ber-token / kunci lisensi / tautan).
   Docker. Kontrak lintas-origin dipegang dua file: `web/src/api.ts` (klien) dan
   `internal/web/inertiamw.go` (server) — baca keduanya sebelum menyentuh
   protokol Inertia. Detail: DEPLOY.md §5.
+- **Gambar produk** tersimpan di bucket Cloudflare R2 bersama `webapp`
+  (prefix per-app `go-self-digital-store/`); kredensial dari `STORE_R2_*`
+  atau fallback `~/.mc/config.json` — lihat internal/web/images.go.
 - **Mode ganda**: shell dirender Go (dev/single-origin, aset dari
   `web/dist/.vite/manifest.json`) ATAU shell statis CF Pages (fetch page JSON).
   Keduanya mem-boot app React yang sama.
@@ -22,7 +25,7 @@ terkirim otomatis ke email pembeli (unduhan ber-token / kunci lisensi / tautan).
 
 | Aksi | Perintah |
 |---|---|
-| Jalankan lokal | `make run` (Go :8080) + `cd web && bun run dev` (:5173, proxy ke :8080) |
+| Jalankan lokal | `make run` (Go :8080; login-as dev + SMTP Mailpit aktif) + `cd web && bun run dev` (:5173, proxy ke :8080) |
 | Verifikasi lengkap | `make test` (go vet + go test + typecheck + build web) |
 | Build frontend | `cd web && bun run build` → `web/dist/` |
 | Migrasi / seed | `./store migrate` / `./store seed` (admin + 4 produk contoh) |

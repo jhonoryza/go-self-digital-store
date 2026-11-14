@@ -25,11 +25,15 @@ stdlib `net/smtp`) + catat **setiap upaya** ke tabel `mail_log`.
 - Email baru = susun body dengan `mail.Style` + `mail.Button`, panggil
   `s.Mail.Send` dalam `go func()`. Jangan log isi pesan — cukup to/subject.
 - Kredensial tidak pernah masuk log/commit.
+- Uji email lokal pakai **Mailpit** (sudah terpasang; SMTP 127.0.0.1:1025, UI
+  http://localhost:8025) — `make run` sudah mengarah ke sana.
 
 ## Verification
 
-- Test integrasi memeriksa mail_log berisi baris email delivery (status error
-  saat SMTP mati) — server_test.go TestCheckoutAndTripayWebhook.
+- e2e: `waitMailLog` di internal/web/images_test.go/e2e_test.go memeriksa
+  mail_log terisi (status `error` saat SMTP mati).
+- Manual: Mailpit menampilkan email reset password + delivery (tautan
+  `/dl/...` ber-token) — status `sent` di mail_log.
 
 ## Child DOX Index
 

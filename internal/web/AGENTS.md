@@ -77,7 +77,7 @@ request asing ditolak sebelum di-buffer.
 - `go test ./internal/web/ -race` — dua kelompok:
   - **server_test.go** (6 suite): auth/lockout/reset, checkout→webhook tripay
     ber-signature→delivery→unduhan, tiket, admin guard.
-  - **e2e_test.go** (11 suite): halaman publik, auth validasi+guard sesi+logout,
+  - **e2e_test.go** (14 suite): halaman publik, auth validasi+guard sesi+logout,
     profil+ganti password (sesi lain putus), dashboard/pesanan/invoice,
     validasi checkout+kupon, pembayaran simulasi (payNow/stok habis/idempoten),
     webhook tripay negatif (EXPIRED/nominal beda/order tak dikenal/fail-closed),

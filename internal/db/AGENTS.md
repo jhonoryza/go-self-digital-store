@@ -19,8 +19,8 @@ SQLite pure-Go (`modernc.org/sqlite`): Open, migrasi embedded, backup VACUUM.
   mail_log, audit_log. Kolom `orders.dl_token` dibuat saat **checkout**
   (bukan saat lunas) — kunci halaman bayar + unduhan.
 - `orders.order_no` (ORD-…) = referensi publik; `id` internal.
-- Migration baru: buat file `NNNN Deskripsi.sql` berikutnya, tidak pernah edit
-  migration lama yang sudah ter-apply.
+- Migration baru: buat file `NNNN_nama.sql` berikutnya (snake_case), tidak
+  pernah edit migration lama yang sudah ter-apply.
 
 ## Work Guidance
 
@@ -38,6 +38,7 @@ SQLite pure-Go (`modernc.org/sqlite`): Open, migrasi embedded, backup VACUUM.
 
 ## Child DOX Index
 
-- `migrations/` — file SQL versi; tanpa AGENTS.md (kontrak di dokumen ini).
-
-- `0002_product_images.sql` — gambar produk (maks 5 per produk, objek di R2 prefix per-app).
+- `migrations/` — file SQL versi; tanpa AGENTS.md (kontrak di dokumen ini):
+  - `0001_init.sql` — skema awal seluruh tabel inti.
+  - `0002_product_images.sql` — gambar produk (maks 5/produk, objek di R2
+    prefix per-app, dipakai internal/web/images.go).

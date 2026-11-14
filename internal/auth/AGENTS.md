@@ -35,8 +35,9 @@ Autentikasi tanpa dependensi: argon2id, sesi cookie, CSRF stateless, lockout.
 
 ## Verification
 
-- `go test ./internal/web/` — TestAuthRegisterLoginLogout, TestLoginLockout,
-  TestPasswordReset mencakup kontrak ini.
+- `go test ./internal/web/ -race` — server_test.go (auth/lockout/reset) dan
+  e2e_test.go (validasi register/login, guard sesi, ganti password memutus
+  sesi lain) mencakup kontrak ini.
 
 ## Child DOX Index
 

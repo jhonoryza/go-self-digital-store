@@ -69,7 +69,10 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
   satu kontrak protokol.
 - Setelah `bun run build`, restart server Go (versi aset dibaca saat startup).
 - Copy UI Bahasa Indonesia; halaman cetak (invoice) sertakan `print:hidden`
-  untuk elemen non-cetak.
+  untuk elemen non-cetak. **Cetak dipaksa tinta gelap di kertas walau UI
+  gelap** — aturan `@media print` di `src/css/app.css` (`.dark *` dinetralkan,
+  `@page` A4); header AccountLayout `print:hidden`; tombol unduh invoice
+  `print:hidden` (yang tercetak: kunci lisensi & teks).
 
 ## Verification
 
