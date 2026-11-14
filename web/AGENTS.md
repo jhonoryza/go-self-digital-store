@@ -41,6 +41,9 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
   callback children App menerima satu objek `{Component, props, key}`.
 - **CSS wajib di-import dari entry** (`import "./css/app.css"` di app.tsx) —
   tanpa itu Vite 8 tidak meng-emit CSS sama sekali.
+- Font: **Ubuntu** (sans) + **Ubuntu Mono**, di-host sendiri via `@fontsource/ubuntu`
+  + `@fontsource/ubuntu-mono` (import bobot 400/500/700 di `app.tsx`; tanpa
+  `<link>` Google Fonts). Token `--font-sans` / `--font-mono` di `app.css`.
 - Tailwind v4 CSS-first: `@plugin "@tailwindcss/forms"`, `@custom-variant dark`
   (strategy class; `<html>` diberi `class="dark"` default), tema brand
   (`brand` hijau pinus, `brass` kuningan) di `src/css/app.css`, plus rule

@@ -3,6 +3,11 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* keluarga huruf dasar seluruh app */
+html {
+  font-family: var(--font-sans);
+}
+
 /* fokus papan-tik yang konsisten dan terlihat di kedua tema */
 :focus-visible {
   outline: 2px solid var(--color-brand-500);
@@ -10,6 +15,9 @@
 }
 
 @theme {
+  --font-sans: "Ubuntu", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Ubuntu Mono", ui-monospace, SFMono-Regular, monospace;
+
   --color-brand-50: #f0f9f4;
   --color-brand-100: #dcf1e5;
   --color-brand-200: #bce3cf;

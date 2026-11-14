@@ -7,6 +7,12 @@ import { usePage } from "@inertiajs/react";
 import { useEffect, type ComponentType, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { fetchInitialPage, setCsrf } from "./api";
+// Ubuntu (Google Fonts) di-host sendiri via @fontsource — tanpa <link> eksternal,
+// font-display: swap bawaan fontsource.
+import "@fontsource/ubuntu/400.css";
+import "@fontsource/ubuntu/500.css";
+import "@fontsource/ubuntu/700.css";
+import "@fontsource/ubuntu-mono/400.css";
 import "./css/app.css";
 import type { Page, PageProps, SharedPageProps } from "@inertiajs/core";
 import type { SharedProps } from "./types";
