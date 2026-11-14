@@ -16,10 +16,6 @@ func (s *Server) guardAuth(next func(http.ResponseWriter, *http.Request, auth.Us
 	return auth.Guard(s.DB, s.cookieCfg(), false, next, s.authOnFail("/login", false))
 }
 
-func (s *Server) dashboard(w http.ResponseWriter, r *http.Request, u auth.User) {
-	s.Page(w, r, "Account/Dashboard", inertia.Props{"flash": flashFromQuery(r)})
-}
-
 func (s *Server) profilePage(w http.ResponseWriter, r *http.Request, u auth.User) {
 	s.Page(w, r, "Account/Profile", inertia.Props{"flash": flashFromQuery(r)})
 }

@@ -170,18 +170,19 @@ type orderItemRow struct {
 
 // orderData payload halaman bayar / detail order.
 type orderData struct {
-	OrderNo  string        `json:"order_no"`
-	Email    string        `json:"email"`
-	Status   string        `json:"status"`
-	Subtotal int           `json:"subtotal"`
-	Discount int           `json:"discount"`
-	Coupon   string        `json:"coupon_code"`
-	Total    int           `json:"total"`
-	PayURL   string        `json:"pay_url"`
-	PayRef   string        `json:"pay_ref"`
-	Provider string        `json:"pay_provider"`
-	PaidAt   string        `json:"paid_at"`
-	Items    []orderOutRow `json:"items"`
+	OrderNo   string        `json:"order_no"`
+	Email     string        `json:"email"`
+	Status    string        `json:"status"`
+	Subtotal  int           `json:"subtotal"`
+	Discount  int           `json:"discount"`
+	Coupon    string        `json:"coupon_code"`
+	Total     int           `json:"total"`
+	PayURL    string        `json:"pay_url"`
+	PayRef    string        `json:"pay_ref"`
+	Provider  string        `json:"pay_provider"`
+	CreatedAt string        `json:"created_at"`
+	PaidAt    string        `json:"paid_at"`
+	Items     []orderOutRow `json:"items"`
 }
 
 type orderOutRow struct {

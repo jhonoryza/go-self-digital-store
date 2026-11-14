@@ -95,6 +95,12 @@ func (s *Server) routes() {
 	m.Handle("GET /profil", s.guardAuth(s.profilePage))
 	m.Handle("POST /profil", s.guardAuth(s.updateProfile))
 	m.Handle("POST /profil/password", s.guardAuth(s.changePassword))
+	m.Handle("GET /pesanan", s.guardAuth(s.ordersPage))
+	m.Handle("GET /pesanan/{order_no}", s.guardAuth(s.orderDetailPage))
+	m.Handle("GET /tiket", s.guardAuth(s.ticketsPage))
+	m.Handle("POST /tiket", s.guardAuth(s.createTicket))
+	m.Handle("GET /tiket/{id}", s.guardAuth(s.ticketDetailPage))
+	m.Handle("POST /tiket/{id}", s.guardAuth(s.replyTicket))
 
 	// checkout & pembayaran
 	m.Handle("POST /checkout", s.limited("checkout", http.HandlerFunc(s.checkout)))
