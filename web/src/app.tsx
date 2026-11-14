@@ -7,6 +7,7 @@ import { usePage } from "@inertiajs/react";
 import { useEffect, type ComponentType, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { fetchInitialPage, setCsrf } from "./api";
+import "./css/app.css";
 import type { Page, PageProps, SharedPageProps } from "@inertiajs/core";
 import type { SharedProps } from "./types";
 
@@ -40,12 +41,17 @@ createInertiaApp<SharedProps>({
   setup({ el, App, props }) {
     createRoot(el).render(
       <App {...props}>
-        {({ Component, props: pageProps }) => (
-          <>
-            <CsrfSync />
-            <Component {...pageProps} />
-          </>
-        )}
+        {({ Component, props: pageProps }) => {
+          // layout persisten diapply manual (callback children menonaktifkan
+          // penerapan layout bawaan App)
+          const layout = Component.layout ?? ((p: ReactNode) => p);
+          return (
+            <>
+              <CsrfSync />
+              {layout(<Component {...pageProps} />)}
+            </>
+          );
+        }}
       </App>,
     );
   },

@@ -142,7 +142,7 @@ func (s *Server) serveAssets(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	full := filepath.Join("web", "dist", rel)
+	full := filepath.Join("web", "dist", "assets", rel)
 	f, err := os.Open(full)
 	if err != nil {
 		http.NotFound(w, r)
