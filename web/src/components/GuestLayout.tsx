@@ -1,6 +1,34 @@
 import { Link, usePage } from "@inertiajs/react";
 import { useEffect, useState, type ReactNode } from "react";
+import { cartCount, getCart } from "../lib/cart";
 import type { SharedProps } from "../types";
+
+// Jumlah item keranjang — ikut event "cart-change" dari lib/cart.
+function CartBadge() {
+  const [count, setCount] = useState(cartCount(getCart()));
+  useEffect(() => {
+    const sync = () => setCount(cartCount(getCart()));
+    window.addEventListener("cart-change", sync);
+    window.addEventListener("pageshow", sync);
+    return () => {
+      window.removeEventListener("cart-change", sync);
+      window.removeEventListener("pageshow", sync);
+    };
+  }, []);
+  return (
+    <Link href="/keranjang" className="relative rounded-md p-2 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white" aria-label="Keranjang">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+      </svg>
+      {count > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
+          {count}
+        </span>
+      )}
+    </Link>
+  );
+}
 
 // Flash toast dari ?ok=/&err= — hilang otomatis.
 function Flash() {
@@ -46,6 +74,7 @@ export default function GuestLayout({ children }: { children: ReactNode }) {
             <Link href="/ketentuan" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white">
               Ketentuan
             </Link>
+            <CartBadge />
             {auth_user ? (
               <>
                 {auth_user.role === "admin" && (

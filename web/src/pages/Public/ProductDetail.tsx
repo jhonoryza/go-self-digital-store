@@ -1,6 +1,7 @@
-import { Link } from "@inertiajs/react";
-import type { ReactNode } from "react";
+import { Link, router } from "@inertiajs/react";
+import { useState, type ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
+import { addToCart } from "../../lib/cart";
 import { rupiah, type Product, type SharedProps } from "../../types";
 
 interface Props extends SharedProps {
@@ -8,6 +9,12 @@ interface Props extends SharedProps {
 }
 
 export default function ProductDetail({ product }: Props) {
+  const [added, setAdded] = useState(false);
+  const add = () => {
+    addToCart(product);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
   return (
     <section className="mx-auto max-w-4xl px-4 py-12">
       <Link href="/produk" className="mb-6 inline-block text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
@@ -23,9 +30,23 @@ export default function ProductDetail({ product }: Props) {
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-zinc-200 pt-6 dark:border-zinc-800">
           <span className="text-2xl font-extrabold text-brand-700 dark:text-brand-400">{rupiah(product.price)}</span>
-          <span className="rounded-full border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
-            {product.type === "file" ? "Berkas digital" : product.type === "key" ? "Kunci lisensi" : "Tautan eksternal"}
-          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={add}
+              className="rounded-lg border border-brand-600 px-4 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-950"
+            >
+              {added ? "✓ Ditambahkan" : "+ Keranjang"}
+            </button>
+            <button
+              onClick={() => {
+                addToCart(product);
+                router.visit("/checkout");
+              }}
+              className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              Beli Sekarang
+            </button>
+          </div>
         </div>
       </div>
     </section>

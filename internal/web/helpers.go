@@ -56,6 +56,14 @@ func rupiah(n int) string {
 	return "Rp" + s
 }
 
+// truncate potong string untuk pesan error/log.
+func truncate(s string, n int) string {
+	if len(s) > n {
+		return s[:n]
+	}
+	return s
+}
+
 // tok token acak n-byte hex (crypto/rand).
 func tok(n int) string { return auth.Token()[:n*2] }
 

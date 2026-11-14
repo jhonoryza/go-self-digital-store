@@ -96,6 +96,12 @@ func (s *Server) routes() {
 	m.Handle("POST /profil", s.guardAuth(s.updateProfile))
 	m.Handle("POST /profil/password", s.guardAuth(s.changePassword))
 
+	// checkout & pembayaran
+	m.Handle("POST /checkout", s.limited("checkout", http.HandlerFunc(s.checkout)))
+	m.HandleFunc("GET /pay/{order_no}", s.payPage)
+	m.Handle("POST /pay/{order_no}", s.limited("checkout", http.HandlerFunc(s.payNow)))
+	m.Handle("POST /callback/payment", s.limited("callback", http.HandlerFunc(s.paymentCallback)))
+
 	// aset Vite (mode shell-Go); produksi utama aset disajikan CF Pages.
 	m.HandleFunc("GET /assets/{path...}", s.serveAssets)
 
