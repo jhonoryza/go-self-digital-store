@@ -43,12 +43,15 @@ createInertiaApp<SharedProps>({
       <App {...props}>
         {({ Component, props: pageProps }) => {
           // layout persisten diapply manual (callback children menonaktifkan
-          // penerapan layout bawaan App)
-          const layout = Component.layout ?? ((p: ReactNode) => p);
+          // penerapan layout bawaan App). resolve() selalu menyetel layout
+          // berupa fungsi — perketat tipe union bawaan Inertia (yang juga
+          // mendukung komponen/array layout) ke bentuk yang dipakai app ini.
+          const Page = Component as PageComponent;
+          const layout = Page.layout ?? ((p: ReactNode) => p);
           return (
             <>
               <CsrfSync />
-              {layout(<Component {...pageProps} />)}
+              {layout(<Page {...pageProps} />)}
             </>
           );
         }}
