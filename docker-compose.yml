@@ -1,0 +1,34 @@
+services:
+  store:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - store-data:/app/data
+    environment:
+      STORE_ADDR: ":8080"
+      STORE_DIR: /app/data
+      STORE_NAME: ${STORE_NAME:-Toko Digital}
+      # URL publik API (mis. https://api.tokokamu.com) — dipakai webhook/unduhan di email
+      STORE_BASE_URL: ${STORE_BASE_URL:-}
+      # origin frontend CF Pages (mis. https://tokokamu.pages.dev) — wajib split-origin
+      STORE_CORS_ORIGINS: ${STORE_CORS_ORIGINS:-}
+      STORE_SMTP_HOST: ${STORE_SMTP_HOST:-}
+      STORE_SMTP_PORT: ${STORE_SMTP_PORT:-587}
+      STORE_SMTP_USER: ${STORE_SMTP_USER:-}
+      STORE_SMTP_PASS: ${STORE_SMTP_PASS:-}
+      STORE_SMTP_FROM: ${STORE_SMTP_FROM:-}
+      STORE_PAYMENT_SECRET: ${STORE_PAYMENT_SECRET:-}
+      STORE_TRUSTED_PROXY: ${STORE_TRUSTED_PROXY:-}
+      STORE_BACKUP_KEEP: ${STORE_BACKUP_KEEP:-7}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    # Nginx/Caddy di depan (TLS) → proxy_pass ke 127.0.0.1:8080.
+    # Lihat DEPLOY.md untuk contoh Caddyfile + setup Cloudflare Pages.
+
+volumes:
+  store-data:

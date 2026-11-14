@@ -1,0 +1,30 @@
+.PHONY: build run dev test migrate seed tidy
+
+# backend
+build:
+	go build -o store ./cmd/store
+
+tidy:
+	go mod tidy && cd web && bun install
+
+run: build
+	STORE_ADDR=:8080 ./store serve
+
+migrate: build
+	./store migrate
+
+seed: build
+	./store seed
+
+# frontend (dev: vite :5173 proxy ke :8080)
+dev:
+	cd web && bun run dev
+
+web-build:
+	cd web && bun run build
+
+# verifikasi lengkap
+test:
+	go vet ./...
+	go test ./...
+	cd web && bun run typecheck && bun run build
