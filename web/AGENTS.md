@@ -1,0 +1,62 @@
+# AGENTS.md — web (frontend Inertia)
+
+## Purpose
+
+Frontend Inertia: React 19 + Vite 8 (Rolldown) + Tailwind v4, package manager
+bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
+(:5173, proxy semua path non-vite ke Go :8080).
+
+## Ownership
+
+- `src/api.ts` — **kontrak split-origin** (paling krusial):
+  1. `XhrHttpClient` di-subclass, `withCredentials = true` (cookie SameSite=None
+     lintas origin),
+  2. `http.onRequest`: prefix `API_BASE` (env `VITE_API_BASE`) untuk URL relatif +
+     header `X-CSRF-Token` (dari props) pada method tulis,
+  3. `fetchInitialPage`: fetch page JSON dari API **tanpa** `X-Inertia-Version`
+     (server menoleransi versi kosong), ikuti `X-Inertia-Location` bila 409.
+- `src/app.tsx` — bootstrap: `fetchInitialPage` → `createInertiaApp({ page })`;
+  resolver `import.meta.glob('./pages/**/*.tsx')`; **layout persisten diapply
+  manual** di callback children (callback kustom menonaktifkan layout bawaan
+  App); `CsrfSync` menyinkronkan token CSRF props → interceptor.
+- `src/types.ts` — SharedProps + helper `rupiah` (cermin helper Go).
+- `src/lib/cart.ts` — keranjang localStorage (event `cart-change`); server
+  memvalidasi ulang harga saat checkout.
+- `src/pages/{Public,Auth,Account,Admin}` — halaman; nama komponen = path
+  komponen Inertia dari backend (mis. `Public/Landing`).
+- `public/_redirects` (`/* /index.html 200`) + `public/_headers` (`/assets/*`
+  immutable) — wajib untuk CF Pages.
+
+## Local Contracts
+
+- **Inertia v3**: field form via `form.data.X` (bukan `form.X`);
+  `useForm` kirim JSON (FormData bila ada File — klien kami meneruskan mentah);
+  callback children App menerima satu objek `{Component, props, key}`.
+- **CSS wajib di-import dari entry** (`import "./css/app.css"` di app.tsx) —
+  tanpa itu Vite 8 tidak meng-emit CSS sama sekali.
+- Tailwind v4 CSS-first: `@plugin "@tailwindcss/forms"`, `@custom-variant dark`,
+  tema brand (`brand` hijau pinus, `brass` kuningan) di `src/css/app.css`.
+- Halaman baru: buat file di `src/pages/<Domain>/<Nama>.tsx`, sematkan layout
+  (`Nama.layout = (p) => <Layout>{p}</Layout>`), tambahkan route + handler Go
+  (resolve dari glob otomatis).
+- `bun run typecheck` harus bersih — semua props halaman bertipe (interface
+  extends `SharedProps`).
+
+## Work Guidance
+
+- Jangan ubah `src/api.ts` tanpa memahami `internal/web/inertiamw.go` — keduanya
+  satu kontrak protokol.
+- Setelah `bun run build`, restart server Go (versi aset dibaca saat startup).
+- Copy UI Bahasa Indonesia; halaman cetak (invoice) sertakan `print:hidden`
+  untuk elemen non-cetak.
+
+## Verification
+
+- `bun run typecheck && bun run build` (bagian dari `make test`).
+- Visual: Chrome headless screenshot `http://localhost:8080/...` setelah build +
+  restart Go (lihat riwayat — halaman putih = aset/versi stale).
+
+## Child DOX Index
+
+- `src/pages/` — halaman per domain (Public/Auth/Account/Admin); tanpa AGENTS.md
+  sendiri, kontrak di dokumen ini.
