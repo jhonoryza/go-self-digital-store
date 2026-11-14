@@ -1,0 +1,14 @@
+# data runtime
+store.db*
+backups/
+files/
+uploads/
+web/hot
+
+# node/bun
+node_modules/
+web/dist/
+
+# go
+*.out
+coverage.out

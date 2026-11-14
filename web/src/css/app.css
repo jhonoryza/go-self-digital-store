@@ -1,0 +1,21 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-brand-50: #f0f9f4;
+  --color-brand-100: #dcf1e5;
+  --color-brand-200: #bce3cf;
+  --color-brand-300: #8ecfb1;
+  --color-brand-400: #5bb28d;
+  --color-brand-500: #38956f;
+  --color-brand-600: #277758;
+  --color-brand-700: #1f5f48;
+  --color-brand-800: #1b4c3b;
+  --color-brand-900: #173f32;
+  --color-brand-950: #0b231b;
+  --color-brass-400: #d9b45a;
+  --color-brass-500: #c9992e;
+  --color-brass-600: #a97a1f;
+}
