@@ -63,7 +63,7 @@ func (s *Server) onOrderPaid(orderNo string, r *http.Request) {
 		for _, it := range order.Items {
 			fmt.Fprintf(&b, `<p style="margin:0 0 8px;"><strong>%s</strong>%s<br>`, it.Title, qtySuffix(it.Qty))
 			switch {
-			case it.Type == "file":
+			case it.HasDownload:
 				link := fmt.Sprintf("%s/dl/%s/%d?t=%s", origin, order.OrderNo, it.ID, dlToken)
 				b.WriteString(mail.Button(link, "Unduh berkas"))
 			case it.Type == "key":

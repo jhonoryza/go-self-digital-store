@@ -1396,3 +1396,65 @@ func TestE2EBuyThenTicketThenInvoice(t *testing.T) {
 		t.Errorf("stats = %v", st)
 	}
 }
+
+// ---- tautan unduh di invoice/pay: satu tautan per item, multi item didukung ----
+
+func TestE2EMultipleDownloadLinks(t *testing.T) {
+	s, ts, d := testServer(t)
+	// dua produk file dengan berkas nyata + satu file produk TANPA berkas
+	f1 := seedProduct(t, d, "berkas-multi-1", 50000, "file")
+	f2 := seedProduct(t, d, "berkas-multi-2", 75000, "file")
+	fEmpty := seedProduct(t, d, "berkas-kosong", 10000, "file")
+	for _, id := range []int64{f1, f2} {
+		if err := writeFileForTest(t, s.filesDir(), fmt.Sprintf("berkas-%d.pdf", id), fmt.Sprintf("KONTEN-%d", id)); err != nil {
+			t.Fatal(err)
+		}
+		d.Exec(`UPDATE products SET file_path=?, file_name=? WHERE id=?`, fmt.Sprintf("berkas-%d.pdf", id), fmt.Sprintf("Berkas %d.pdf", id), id)
+	}
+
+	// user checkout 3 produk file sekaligus (2 berkas + 1 kosong) dalam SATU order
+	client := newClient()
+	doPost(t, client, ts.URL+"/register", `{"name":"Multi","email":"multi@uji.id","password":"rahasia123"}`)
+	orderNo, token := checkoutOrder(t, client, ts,
+		fmt.Sprintf(`{"items":[{"id":%d,"qty":1},{"id":%d,"qty":1},{"id":%d,"qty":1}],"email":"multi@uji.id"}`, f1, f2, fEmpty))
+	if res := paySimulasi(t, client, ts, orderNo, token); res.StatusCode != http.StatusFound {
+		t.Fatalf("paySimulasi = %d", res.StatusCode)
+	}
+
+	// halaman pay (publik, ber-token): dua item punya has_download, item kosong tidak
+	page := doPage(t, client, fmt.Sprintf("%s/pay/%s?t=%s", ts.URL, orderNo, token))
+	items := prop(t, page)["order"].(map[string]any)["items"].([]any)
+	downloads := 0
+	for _, it := range items {
+		if it.(map[string]any)["has_download"] == true {
+			downloads++
+		}
+	}
+	if downloads != 2 {
+		t.Fatalf("item has_download = %d, mau 2 (produk tanpa berkas tak boleh punya tautan)", downloads)
+	}
+
+	// invoice: dua tautan /dl dengan item id berbeda (multi tautan)
+	page = doPage(t, client, ts.URL+"/pesanan/"+orderNo)
+	items = prop(t, page)["order"].(map[string]any)["items"].([]any)
+	urls := map[string]bool{}
+	for _, it := range items {
+		m := it.(map[string]any)
+		if m["has_download"] == true {
+			urls[fmt.Sprintf("/dl/%s/%v?t=%s", orderNo, m["id"], token)] = true
+		}
+	}
+	if len(urls) != 2 {
+		t.Fatalf("tautan unduh unik di invoice = %d (%v), mau 2", len(urls), urls)
+	}
+
+	// kedua tautan benar-benar mengunduh isi masing-masing
+	for u := range urls {
+		res := doGetRes(t, &http.Client{}, ts.URL+u, nil)
+		b, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+		if res.StatusCode != http.StatusOK || !strings.Contains(string(b), "KONTEN-") {
+			t.Errorf("unduh %s = %d %q", u, res.StatusCode, truncate(string(b), 40))
+		}
+	}
+}

@@ -1,3 +1,4 @@
+import { Download } from "lucide-react";
 import { usePage } from "@inertiajs/react";
 import type { ReactNode } from "react";
 import AccountLayout from "../../components/AccountLayout";
@@ -132,8 +133,12 @@ export default function Invoice({ order, token }: Props) {
                   </a>
                 )}
                 {i.has_download && (
-                  <a href={`/dl/${order.order_no}/${i.id}?t=${token}`} className="text-brand-700 hover:underline dark:text-brand-400">
-                    Unduh berkas →
+                  <a
+                    href={`/dl/${order.order_no}/${i.id}?t=${token}`}
+                    className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Unduh berkas
                   </a>
                 )}
               </div>

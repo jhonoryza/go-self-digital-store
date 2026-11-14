@@ -3,7 +3,7 @@ import { useEffect, type ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
 import { clearCart } from "../../lib/cart";
 import { rupiah, type SharedProps } from "../../types";
-import { CheckCircle2, Hourglass } from "lucide-react";
+import { Download, CheckCircle2, Hourglass } from "lucide-react";
 
 interface OrderItem {
   id: number;
@@ -137,8 +137,12 @@ export default function Pay({ order, token, simulasi }: Props) {
                 </a>
               )}
               {i.has_download && (
-                <a href={`/dl/${order.order_no}/${i.id}?t=${token}`} className="mt-1 inline-block text-sm font-semibold text-brand-700 hover:underline dark:text-brand-400">
-                  Unduh berkas →
+                <a
+                  href={`/dl/${order.order_no}/${i.id}?t=${token}`}
+                  className="mt-1 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Unduh berkas
                 </a>
               )}
             </div>

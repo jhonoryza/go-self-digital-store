@@ -208,7 +208,7 @@ func (s *Server) loadOrder(orderNo string) (orderData, bool) {
 	}
 	// catatan: koneksi tunggal SQLite — JANGAN query bersarang saat rows terbuka;
 	// kumpulkan items dulu, kunci lisensi di-join sekali setelahnya.
-	rows, err := s.DB.Query(`SELECT oi.id, oi.product_id, oi.title, oi.price, oi.qty, p.type, p.ext_url
+	rows, err := s.DB.Query(`SELECT oi.id, oi.product_id, oi.title, oi.price, oi.qty, p.type, p.ext_url, p.file_path
 		FROM order_items oi JOIN products p ON p.id = oi.product_id WHERE oi.order_id=? ORDER BY oi.id`, id)
 	if err != nil {
 		logErr("loadOrder items %s: %v", orderNo, err)
@@ -217,12 +217,13 @@ func (s *Server) loadOrder(orderNo string) (orderData, bool) {
 	keysByItem := map[int64][]string{}
 	type itemRaw struct {
 		orderOutRow
-		extURL string
+		extURL   string
+		filePath string
 	}
 	var raws []itemRaw
 	for rows.Next() {
 		var it itemRaw
-		if err := rows.Scan(&it.ID, &it.ProductID, &it.Title, &it.Price, &it.Qty, &it.Type, &it.extURL); err == nil {
+		if err := rows.Scan(&it.ID, &it.ProductID, &it.Title, &it.Price, &it.Qty, &it.Type, &it.extURL, &it.filePath); err == nil {
 			raws = append(raws, it)
 		}
 	}
@@ -245,7 +246,7 @@ func (s *Server) loadOrder(orderNo string) (orderData, bool) {
 
 	for _, it := range raws {
 		out := it.orderOutRow
-		out.HasDownload = out.Type == "file"
+		out.HasDownload = out.Type == "file" && it.filePath != ""
 		if o.Status == "paid" {
 			if out.Type == "link" {
 				out.ExtURL = it.extURL
