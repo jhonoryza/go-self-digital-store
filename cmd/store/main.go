@@ -108,7 +108,7 @@ func seed(cfg config.Config) {
 	r, err := d.Exec(`INSERT INTO users (email, name, password, role) VALUES (?,?,?, 'admin')`, email, "Admin", hash)
 	must(err)
 	id, _ := r.LastInsertId()
-	fmt.Printf("admin dibuat: %s / %s (id %d) — GANTI password segera\n", email, pass, id)
+	fmt.Printf("admin dibuat: %s / %s (id %d) - GANTI password segera\n", email, pass, id)
 
 	// produk contoh (idempoten: skip bila slug sudah ada)
 	samples := []struct {
@@ -119,7 +119,7 @@ func seed(cfg config.Config) {
 		{"paket-template-landing", "Paket Template Landing Page", "5 template landing page siap pakai (HTML + Tailwind), termasuk dokumentasi.", 149000, "file"},
 		{"e-book-go-golang", "E-Book: Belajar Go dari Nol", "120 halaman PDF bahasa Indonesia: sintaks dasar sampai deploy ke VPS.", 79000, "file"},
 		{"kunci-tools-premium", "Kunci Aktivasi Tools Premium", "Kunci lisensi perangkat lunak desktop, 1 order = 1 kunci.", 250000, "key"},
-		{"notion-dashboard-umkm", "Notion Dashboard UMKM", "Template Notion manajemen usaha kecil — tautan duplikat ke workspace Anda.", 59000, "link"},
+		{"notion-dashboard-umkm", "Notion Dashboard UMKM", "Template Notion manajemen usaha kecil - tautan duplikat ke workspace Anda.", 59000, "link"},
 	}
 	for _, s := range samples {
 		var n int

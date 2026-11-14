@@ -31,6 +31,7 @@ type Config struct {
 	CookieSameSite string   // "lax" (default same-origin) | "none" (wajib utk split-origin CF Pages)
 	TrustedProxy   bool     // percaya X-Forwarded-For (reverse proxy sendiri)
 	PaymentSecret  string   // HMAC webhook adapter kustom (opsional)
+	DevLogin       bool     // aktifkan /dev/login (masuk sebagai user/admin tanpa password) — JANGAN di produksi
 	SMTP           SMTP
 }
 
@@ -60,6 +61,7 @@ func Load() Config {
 		CookieSameSite: sameSite,
 		TrustedProxy:   envBool("STORE_TRUSTED_PROXY", false),
 		PaymentSecret:  env("STORE_PAYMENT_SECRET", ""),
+		DevLogin:       envBool("STORE_DEV_LOGIN", false),
 		SMTP: SMTP{
 			Host: env("STORE_SMTP_HOST", ""),
 			Port: env("STORE_SMTP_PORT", "587"),

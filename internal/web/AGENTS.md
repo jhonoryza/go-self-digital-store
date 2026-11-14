@@ -27,6 +27,8 @@ request asing ditolak sebelum di-buffer.
 | `tickets.go` | tiket user: list/buat/balas; status open→answered→closed |
 | `admin.go` | konsol admin: stats, users, orders (lunas manual/resend), produk CRUD multipart + stok kunci, maillog, tiket admin, gateway config/activate |
 | `server_test.go` | test integrasi (bootstrap `testServer`: SQLite temp-dir nyata + httptest) |
+| `e2e_test.go` | test E2E per fitur (publik, auth, profil, checkout, webhook, unduhan, tiket, admin, middleware) |
+| `dev.go` | dev login-as (`/dev/login`, hanya bila `STORE_DEV_LOGIN=1`; route tidak terdaftar bila mati) |
 
 ## Local Contracts
 

@@ -44,7 +44,7 @@ export default function Orders({ orders }: Props) {
                     <p className="text-xs text-zinc-500">{o.created_at}</p>
                   </td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                    {(o.items ?? []).map((i) => `${i.title} ×${i.qty}`).join(", ") || "—"}
+                    {(o.items ?? []).map((i) => `${i.title} ×${i.qty}`).join(", ") || "-"}
                   </td>
                   <td className="px-4 py-3 font-semibold">{rupiah(o.total)}</td>
                   <td className="px-4 py-3">

@@ -145,7 +145,7 @@ export default function Invoice({ order, token }: Props) {
 
       {!paid && (
         <p className="text-sm text-zinc-500 print:hidden">
-          Order belum lunas —{" "}
+          Order belum lunas -{" "}
           <a href={`/pay/${order.order_no}?t=${token}`} className="text-brand-600 hover:underline dark:text-brand-400">
             buka halaman pembayaran
           </a>

@@ -120,7 +120,7 @@ func (s *Server) adminOrderPaid(w http.ResponseWriter, r *http.Request, u auth.U
 		s.flashOK(w, r, "/admin/orders", "Order "+orderNo+" ditandai lunas + produk terkirim.")
 		return
 	}
-	s.flashErr(w, r, "/admin/orders", "Gagal — order mungkin sudah lunas/tidak ada.")
+	s.flashErr(w, r, "/admin/orders", "Gagal - order mungkin sudah lunas/tidak ada.")
 }
 
 // adminOrderResend POST /admin/orders/{no}/resend — kirim ulang email produk.

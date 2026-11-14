@@ -41,7 +41,7 @@ export default function AdminOrders({ orders }: Props) {
                   <p className="text-xs text-zinc-500">{o.created_at}</p>
                 </td>
                 <td className="px-4 py-2.5 text-zinc-600 dark:text-zinc-400">{o.email}</td>
-                <td className="px-4 py-2.5">{o.pay_provider || "—"}</td>
+                <td className="px-4 py-2.5">{o.pay_provider || "-"}</td>
                 <td className="px-4 py-2.5 font-semibold">{rupiah(o.total)}</td>
                 <td className="px-4 py-2.5">
                   <span

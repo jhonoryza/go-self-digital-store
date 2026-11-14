@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Toko Digital</title>
+    <script>
+      // tema sebelum paint; default gelap, pilihan user menang (sama dengan shell Go).
+      (function () {
+        try {
+          var t = localStorage.getItem("theme");
+          if (t === "light") document.documentElement.classList.remove("dark");
+          else if (t === "dark") document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <!-- Shell statis untuk Cloudflare Pages: div#app kosong, halaman awal

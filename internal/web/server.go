@@ -98,6 +98,12 @@ func (s *Server) routes() {
 	m.HandleFunc("GET /reset-password", s.resetPage)
 	m.Handle("POST /reset-password", s.limited("reset", http.HandlerFunc(s.resetPassword)))
 
+	// dev: masuk sebagai akun mana pun (hanya bila STORE_DEV_LOGIN=1)
+	if s.Cfg.DevLogin {
+		m.HandleFunc("GET /dev/login", s.devLoginPage)
+		m.HandleFunc("POST /dev/login", s.devLoginAs)
+	}
+
 	// akun (Guard user)
 	m.Handle("GET /dashboard", s.guardAuth(s.dashboard))
 	m.Handle("GET /profil", s.guardAuth(s.profilePage))

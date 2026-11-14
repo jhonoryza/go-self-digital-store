@@ -34,7 +34,7 @@ export default function AdminTickets({ tickets }: Props) {
             </div>
             <p className="mt-1 text-xs text-zinc-500">
               {t.email}
-              {t.order_no ? ` — order ${t.order_no}` : ""} — diperbarui {t.updated_at}
+              {t.order_no ? ` - order ${t.order_no}` : ""} - diperbarui {t.updated_at}
             </p>
           </Link>
         ))}

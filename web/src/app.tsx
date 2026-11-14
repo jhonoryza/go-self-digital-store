@@ -13,7 +13,7 @@ import type { SharedProps } from "./types";
 
 const pageFiles = import.meta.glob("./pages/**/*.tsx");
 
-// Komponen halaman Inertia — boleh menyematkan layout persisten (.layout).
+// Komponen halaman Inertia - boleh menyematkan layout persisten (.layout).
 type PageComponent = ComponentType<any> & { layout?: (p: ReactNode) => ReactNode };
 
 async function resolve(name: string, _page?: Page<SharedPageProps>): Promise<PageComponent> {
@@ -44,7 +44,7 @@ createInertiaApp<SharedProps>({
         {({ Component, props: pageProps }) => {
           // layout persisten diapply manual (callback children menonaktifkan
           // penerapan layout bawaan App). resolve() selalu menyetel layout
-          // berupa fungsi — perketat tipe union bawaan Inertia (yang juga
+          // berupa fungsi - perketat tipe union bawaan Inertia (yang juga
           // mendukung komponen/array layout) ke bentuk yang dipakai app ini.
           const Page = Component as PageComponent;
           const layout = Page.layout ?? ((p: ReactNode) => p);

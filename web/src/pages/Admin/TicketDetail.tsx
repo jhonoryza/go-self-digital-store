@@ -34,7 +34,7 @@ export default function AdminTicketDetail({ ticket, email }: Props) {
         <h1 className="text-xl font-bold">{ticket.subject}</h1>
         <p className="mt-1 text-sm text-zinc-500">
           {email}
-          {ticket.order_no ? ` — order ${ticket.order_no}` : ""} — status: {ticket.status}
+          {ticket.order_no ? ` - order ${ticket.order_no}` : ""} - status: {ticket.status}
         </p>
       </div>
 
@@ -49,7 +49,7 @@ export default function AdminTicketDetail({ ticket, email }: Props) {
             }`}
           >
             <p className="mb-1 text-xs font-semibold text-zinc-500">
-              {m.sender === "admin" ? "Admin (Anda)" : "User"} — {m.created_at}
+              {m.sender === "admin" ? "Admin (Anda)" : "User"} - {m.created_at}
             </p>
             <p className="whitespace-pre-wrap">{m.body}</p>
           </div>

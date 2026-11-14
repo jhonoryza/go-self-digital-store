@@ -1,5 +1,6 @@
 import { Link, router, usePage } from "@inertiajs/react";
 import { type ReactNode } from "react";
+import ThemeToggle from "./ThemeToggle";
 import type { SharedProps } from "../types";
 
 // Layout area akun (user): header + nav tab. Logout via POST (CSRF otomatis
@@ -24,6 +25,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
           </Link>
           <div className="flex items-center gap-3 text-sm">
             <span className="hidden text-zinc-500 sm:block">{auth_user?.email}</span>
+            <ThemeToggle />
             {auth_user?.role === "admin" && (
               <Link href="/admin" className="rounded-lg border border-zinc-300 px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
                 Admin

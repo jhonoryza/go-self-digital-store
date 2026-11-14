@@ -1,12 +1,16 @@
 import { Link, usePage } from "@inertiajs/react";
 import type { ReactNode } from "react";
+import ThemeToggle from "./ThemeToggle";
 import type { SharedProps } from "../types";
 
 // Layout kartu terpusat untuk halaman auth.
 export default function AuthLayout({ title, children }: { title: string; children: ReactNode }) {
   const { flash, app_name } = usePage<SharedProps>().props;
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
+    <div className="relative flex min-h-screen items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 block text-center text-xl font-bold tracking-tight">
           {app_name ?? "Toko Digital"}

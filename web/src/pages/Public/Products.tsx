@@ -1,6 +1,7 @@
 import { Link } from "@inertiajs/react";
 import type { ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
+import ProductTypeIcon from "../../components/ProductTypeIcon";
 import { rupiah, type Product, type SharedProps } from "../../types";
 
 interface Props extends SharedProps {
@@ -12,7 +13,7 @@ export default function Products({ products }: Props) {
     <section className="mx-auto max-w-6xl px-4 py-12">
       <h1 className="mb-2 text-3xl font-bold">Semua Produk</h1>
       <p className="mb-8 text-zinc-600 dark:text-zinc-400">
-        Produk digital siap unduh — terkirim otomatis ke email setelah lunas.
+        Produk digital siap unduh - terkirim otomatis ke email setelah lunas.
       </p>
       {products.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-300 p-12 text-center text-zinc-500 dark:border-zinc-700">
@@ -27,7 +28,7 @@ export default function Products({ products }: Props) {
               className="group rounded-xl border border-zinc-200 bg-white p-5 transition hover:border-brand-400 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
             >
               <div className="mb-3 flex h-28 items-center justify-center rounded-lg bg-brand-50 text-3xl dark:bg-brand-950">
-                {p.type === "file" ? "📦" : p.type === "key" ? "🔑" : "🔗"}
+                <ProductTypeIcon type={p.type} className="h-6 w-6" />
               </div>
               <h3 className="font-semibold group-hover:text-brand-700 dark:group-hover:text-brand-400">{p.title}</h3>
               <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">{p.description}</p>

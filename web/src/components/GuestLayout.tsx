@@ -1,9 +1,11 @@
 import { Link, usePage } from "@inertiajs/react";
+import { Menu, ShoppingCart, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import ThemeToggle from "./ThemeToggle";
 import { cartCount, getCart } from "../lib/cart";
 import type { SharedProps } from "../types";
 
-// Jumlah item keranjang — ikut event "cart-change" dari lib/cart.
+// Jumlah item keranjang - ikut event "cart-change" dari lib/cart.
 function CartBadge() {
   const [count, setCount] = useState(cartCount(getCart()));
   useEffect(() => {
@@ -17,10 +19,7 @@ function CartBadge() {
   }, []);
   return (
     <Link href="/keranjang" className="relative rounded-md p-2 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white" aria-label="Keranjang">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" />
-        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-      </svg>
+      <ShoppingCart className="h-5 w-5" />
       {count > 0 && (
         <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
           {count}
@@ -30,7 +29,7 @@ function CartBadge() {
   );
 }
 
-// Flash toast dari ?ok=/&err= — hilang otomatis.
+// Flash toast dari ?ok=/&err= - hilang otomatis.
 function Flash() {
   const { flash } = usePage<SharedProps>().props;
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -57,7 +56,7 @@ function Flash() {
 }
 
 export default function GuestLayout({ children }: { children: ReactNode }) {
-  const { auth_user, app_name } = usePage<SharedProps>().props;
+  const { auth_user, app_name, dev_login } = usePage<SharedProps>().props;
   const [open, setOpen] = useState(false);
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
@@ -74,7 +73,13 @@ export default function GuestLayout({ children }: { children: ReactNode }) {
             <Link href="/ketentuan" className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white">
               Ketentuan
             </Link>
+            {dev_login && (
+              <Link href="/dev/login" className="text-brass-600 hover:text-brass-800 dark:text-brass-400">
+                Dev Login
+              </Link>
+            )}
             <CartBadge />
+            <ThemeToggle />
             {auth_user ? (
               <>
                 {auth_user.role === "admin" && (
@@ -105,15 +110,18 @@ export default function GuestLayout({ children }: { children: ReactNode }) {
             onClick={() => setOpen(!open)}
             aria-label="Buka menu"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              {open ? <path d="M18 6 6 18M6 6l12 12" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-            </svg>
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
         {open && (
           <nav className="border-t border-zinc-200 px-4 py-3 text-sm sm:hidden dark:border-zinc-800">
             <Link href="/produk" className="block py-2" onClick={() => setOpen(false)}>Produk</Link>
             <Link href="/ketentuan" className="block py-2" onClick={() => setOpen(false)}>Ketentuan</Link>
+            {dev_login && (
+              <Link href="/dev/login" className="block py-2 text-brass-600 dark:text-brass-400" onClick={() => setOpen(false)}>
+                Dev Login
+              </Link>
+            )}
             {auth_user ? (
               <Link href="/dashboard" className="block py-2" onClick={() => setOpen(false)}>Dashboard</Link>
             ) : (
@@ -130,7 +138,7 @@ export default function GuestLayout({ children }: { children: ReactNode }) {
       <main className="flex-1">{children}</main>
       <footer className="border-t border-zinc-200 py-8 dark:border-zinc-800">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 text-sm text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-          <span>© {new Date().getFullYear()} {app_name ?? "Toko Digital"} — produk digital</span>
+          <span>© {new Date().getFullYear()} {app_name ?? "Toko Digital"} - produk digital</span>
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-zinc-800 dark:hover:text-zinc-200">Privasi</Link>
             <Link href="/ketentuan" className="hover:text-zinc-800 dark:hover:text-zinc-200">Ketentuan</Link>

@@ -127,7 +127,7 @@ func (s *Server) createTicket(w http.ResponseWriter, r *http.Request, u auth.Use
 	}
 	tid, _ := res.LastInsertId()
 	s.DB.Exec(`INSERT INTO ticket_messages (ticket_id, sender, body) VALUES (?,?,?)`, tid, "user", body)
-	s.flashOK(w, r, "/tiket/"+fmtInt(tid), "Tiket dibuat — admin akan membalas di halaman ini.")
+	s.flashOK(w, r, "/tiket/"+fmtInt(tid), "Tiket dibuat - admin akan membalas di halaman ini.")
 }
 
 // replyTicket POST /tiket/{id} — balasan user; status kembali 'open'.
@@ -140,7 +140,7 @@ func (s *Server) replyTicket(w http.ResponseWriter, r *http.Request, u auth.User
 	t, ok := s.loadTicket(id, u)
 	if !ok || t.Status == "closed" {
 		if t.Status == "closed" {
-			s.flashErr(w, r, "/tiket/"+fmtInt(id), "Tiket sudah ditutup — buka tiket baru bila perlu.")
+			s.flashErr(w, r, "/tiket/"+fmtInt(id), "Tiket sudah ditutup - buka tiket baru bila perlu.")
 			return
 		}
 		http.NotFound(w, r)

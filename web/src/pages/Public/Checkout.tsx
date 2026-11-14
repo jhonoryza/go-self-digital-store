@@ -21,7 +21,7 @@ export default function Checkout({ auth_user }: SharedProps) {
     form.setData("items", items);
     form.post("/checkout", {
       onSuccess: () => {
-        // order terbentuk — keranjang dikosongkan (redirect gateway/pay sudah jalan)
+        // order terbentuk - keranjang dikosongkan (redirect gateway/pay sudah jalan)
         if (items.length > 0 && !form.hasErrors) clearCart();
       },
     });

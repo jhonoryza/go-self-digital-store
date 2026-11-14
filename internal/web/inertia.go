@@ -29,11 +29,22 @@ const (
 // rootTemplate shell HTML yang dirender Go; aset diisi lewat template data
 // (appJS/appCSS) agar tidak terikat bentuk manifest.
 const rootTemplate = `<!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title inertia>{{ .appName }}</title>
+<script>
+// tema diputuskan sebelum paint agar tak berkedip; default gelap,
+// pilihan user (localStorage) menang.
+(function () {
+  try {
+    var t = localStorage.getItem("theme");
+    if (t === "light") document.documentElement.classList.remove("dark");
+    else if (t === "dark") document.documentElement.classList.add("dark");
+  } catch (e) {}
+})();
+</script>
 {{ if .hmr }}<script type="module" src="{{ .hmrURL }}/@vite/client"></script>{{ end }}
 <link rel="stylesheet" href="{{ .appCSS }}"/>
 <script type="module" src="{{ .appJS }}"></script>

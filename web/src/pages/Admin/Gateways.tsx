@@ -29,7 +29,7 @@ export default function AdminGateways({ active, providers }: Props) {
       <h1 className="text-2xl font-bold">Gateway Pembayaran</h1>
       <p className="text-sm text-zinc-500">
         Aktif saat ini: <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">{active}</span>.
-        Nilai tersimpan tampil tersamar — biarkan kosong bila tidak ingin mengubah.
+        Nilai tersimpan tampil tersamar - biarkan kosong bila tidak ingin mengubah.
       </p>
       <div className="grid gap-6 lg:grid-cols-2">
         {(providers ?? []).map((p) => (
@@ -91,7 +91,7 @@ function GatewayCard({ provider, active }: { provider: Provider; active: string 
               className="w-full rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800"
               value={values[f.key] ?? ""}
               onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
-              placeholder={f.value === "•••" ? "tersimpan (•••) — isi bila ingin mengubah" : ""}
+              placeholder={f.value === "•••" ? "tersimpan (•••) - isi bila ingin mengubah" : ""}
             />
           </div>
         ))}

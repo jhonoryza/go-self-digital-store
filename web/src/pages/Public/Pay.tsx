@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
 import { clearCart } from "../../lib/cart";
 import { rupiah, type SharedProps } from "../../types";
+import { CheckCircle2, Hourglass } from "lucide-react";
 
 interface OrderItem {
   id: number;
@@ -42,7 +43,7 @@ interface Props extends SharedProps {
 export default function Pay({ order, token, simulasi }: Props) {
   const paid = order.status === "paid";
 
-  // Kunjungan /pay selalu pasca-checkout — keranjang sudah diproses.
+  // Kunjungan /pay selalu pasca-checkout - keranjang sudah diproses.
   useEffect(() => {
     clearCart();
   }, []);
@@ -56,12 +57,12 @@ export default function Pay({ order, token, simulasi }: Props) {
           paid ? "bg-brand-50 text-brand-800 dark:bg-brand-950 dark:text-brand-300" : "bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
         }`}
       >
-        <span className="text-2xl">{paid ? "✅" : "⏳"}</span>
+        {paid ? <CheckCircle2 className="h-10 w-10 text-brand-600 dark:text-brand-400" /> : <Hourglass className="h-10 w-10 text-brass-500" aria-hidden="true" />}
         <div>
           <p className="font-bold">{paid ? "Pembayaran terverifikasi!" : "Menunggu pembayaran"}</p>
           <p className="text-sm">
             Order <span className="font-mono font-semibold">{order.order_no}</span>
-            {paid && order.paid_at ? ` — lunas ${order.paid_at}` : ""}
+            {paid && order.paid_at ? ` - lunas ${order.paid_at}` : ""}
           </p>
         </div>
       </div>

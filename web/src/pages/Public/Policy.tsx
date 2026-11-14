@@ -17,7 +17,7 @@ const privacy = [
 const terms = [
   ["Lisensi", "Setiap pembelian memberi Anda lisensi pribadi, bukan komersial, kecuali dinyatakan lain pada deskripsi produk. Dilarang menjual ulang atau membagikan berkas secara publik."],
   ["Pengiriman", "Produk dikirim otomatis ke email setelah pembayaran terverifikasi oleh gateway. Tautan unduh juga tersedia di halaman bayar dan dashboard Anda."],
-  ["Refund", "Karena sifat produk digital yang langsung terkirim, pembelian tidak dapat dibatalkan setelah produk terkirim. Bila berkas rusak/tidak bisa diakses, ajukan tiket — kami perbaiki atau ganti."],
+  ["Refund", "Karena sifat produk digital yang langsung terkirim, pembelian tidak dapat dibatalkan setelah produk terkirim. Bila berkas rusak/tidak bisa diakses, ajukan tiket - kami perbaiki atau ganti."],
   ["Akun", "Anda bertanggung jawab menjaga kerahasiaan akun. Satu akun per orang; aktivitas penipuan mengakibatkan penangguhan."],
   ["Perubahan", "Ketentuan dapat diperbarui sewaktu-waktu; versi terbaru berlaku sejak dipublikasikan di halaman ini."],
 ];

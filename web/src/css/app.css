@@ -3,6 +3,12 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* fokus papan-tik yang konsisten dan terlihat di kedua tema */
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
 @theme {
   --color-brand-50: #f0f9f4;
   --color-brand-100: #dcf1e5;

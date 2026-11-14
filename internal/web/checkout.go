@@ -69,7 +69,7 @@ func (s *Server) checkout(w http.ResponseWriter, r *http.Request) {
 	}
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 	if !validEmail(email) {
-		s.renderWithErrors(w, r, "Public/Checkout", nil, inertia.ValidationErrors{"email": "email tidak valid — produk dikirim ke email ini"})
+		s.renderWithErrors(w, r, "Public/Checkout", nil, inertia.ValidationErrors{"email": "email tidak valid - produk dikirim ke email ini"})
 		return
 	}
 
@@ -146,7 +146,7 @@ func (s *Server) checkout(w http.ResponseWriter, r *http.Request) {
 		s.baseURL(r)+"/callback/payment", s.publicOrigin(r)+"/pay/"+orderNo+"?t="+dlToken)
 	if err != nil {
 		logErr("charge %s: %v", orderNo, err)
-		s.flashErr(w, r, "/keranjang", "Gateway pembayaran gagal: "+truncate(err.Error(), 120)+" — coba lagi.")
+		s.flashErr(w, r, "/keranjang", "Gateway pembayaran gagal: "+truncate(err.Error(), 120)+" - coba lagi.")
 		return
 	}
 	s.DB.Exec(`UPDATE orders SET pay_url=?, pay_provider=? WHERE id=?`, payURL, provider, orderID)
@@ -320,7 +320,7 @@ func (s *Server) payNow(w http.ResponseWriter, r *http.Request) {
 
 func statusFlash(status string) string {
 	if status == "paid" {
-		return "Pembayaran (simulasi) berhasil — produk terkirim ke email."
+		return "Pembayaran (simulasi) berhasil - produk terkirim ke email."
 	}
 	return "Status: " + status
 }
@@ -397,7 +397,7 @@ func (s *Server) markOrderPaid(orderNo string, r *http.Request, paidAmt int) boo
 	}
 	if paidAmt > 0 && paidAmt != total {
 		// pembayaran parsial (mis. VA dibayar sebagian) tidak boleh dianggap lunas
-		logErr("callback %s: nominal %d ≠ total %d — ditolak", orderNo, paidAmt, total)
+		logErr("callback %s: nominal %d ≠ total %d - ditolak", orderNo, paidAmt, total)
 		return false
 	}
 	res, err := s.DB.Exec(`UPDATE orders SET status='paid', paid_at=datetime('now') WHERE order_no=? AND status!='paid'`, orderNo)
@@ -406,7 +406,7 @@ func (s *Server) markOrderPaid(orderNo string, r *http.Request, paidAmt int) boo
 		return false
 	}
 	if n, _ := res.RowsAffected(); n != 1 {
-		return false // sudah lunas sebelumnya — idempoten
+		return false // sudah lunas sebelumnya - idempoten
 	}
 	s.onOrderPaid(orderNo, r)
 	return true

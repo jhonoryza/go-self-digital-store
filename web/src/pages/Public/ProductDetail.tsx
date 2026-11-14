@@ -1,6 +1,7 @@
 import { Link, router } from "@inertiajs/react";
 import { useState, type ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
+import ProductTypeIcon from "../../components/ProductTypeIcon";
 import { addToCart } from "../../lib/cart";
 import { rupiah, type Product, type SharedProps } from "../../types";
 
@@ -22,7 +23,7 @@ export default function ProductDetail({ product }: Props) {
       </Link>
       <div className="rounded-xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mb-4 flex h-32 items-center justify-center rounded-lg bg-brand-50 text-5xl dark:bg-brand-950">
-          {product.type === "file" ? "📦" : product.type === "key" ? "🔑" : "🔗"}
+          <ProductTypeIcon type={product.type} className="h-6 w-6" />
         </div>
         <h1 className="text-3xl font-bold">{product.title}</h1>
         <p className="mt-4 whitespace-pre-wrap leading-relaxed text-zinc-600 dark:text-zinc-400">

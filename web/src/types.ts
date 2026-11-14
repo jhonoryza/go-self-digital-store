@@ -13,6 +13,14 @@ export interface SharedProps extends PageProps {
   csrf_token?: string;
   flash?: { ok?: string; err?: string };
   app_name?: string;
+  dev_login?: boolean; // pintu dev /dev/login aktif (STORE_DEV_LOGIN=1)
+}
+
+export interface DevAccount {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
 }
 
 export interface Product {

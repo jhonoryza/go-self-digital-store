@@ -59,9 +59,9 @@ export default function AdminProducts({ products }: Props) {
                   {p.featured && <span className="rounded-full bg-brass-400/20 px-2 py-0.5 text-xs font-semibold text-brass-600 dark:text-brass-400">unggulan</span>}
                 </div>
                 <p className="mt-0.5 text-xs text-zinc-500">
-                  <span className="font-mono">{p.slug}</span> — {p.type} — {rupiah(p.price)}
-                  {p.type === "key" && ` — stok kunci: ${p.key_count}`}
-                  {p.type === "file" && p.file_name && ` — ${p.file_name}`}
+                  <span className="font-mono">{p.slug}</span> - {p.type} - {rupiah(p.price)}
+                  {p.type === "key" && ` - stok kunci: ${p.key_count}`}
+                  {p.type === "file" && p.file_name && ` - ${p.file_name}`}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -88,7 +88,7 @@ export default function AdminProducts({ products }: Props) {
         ))}
         {(products ?? []).length === 0 && (
           <p className="rounded-xl border border-dashed border-zinc-300 p-8 text-center text-zinc-500 dark:border-zinc-700">
-            Belum ada produk — klik “Produk baru”.
+            Belum ada produk - klik “Produk baru”.
           </p>
         )}
       </div>
@@ -219,7 +219,7 @@ function ProductForm({
           className="rounded-lg border border-dashed border-zinc-300 p-4 dark:border-zinc-700"
         >
           <label className="mb-1 block text-xs font-medium">
-            Tambah stok kunci (satu kunci per baris) — saat ini {product.key_count}
+            Tambah stok kunci (satu kunci per baris) - saat ini {product.key_count}
           </label>
           <textarea id="keys" rows={3}
             className="w-full rounded-lg border-zinc-300 font-mono text-xs dark:border-zinc-700 dark:bg-zinc-800"

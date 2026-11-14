@@ -22,7 +22,7 @@ interface Props extends SharedProps {
   ticket: Ticket;
 }
 
-// Percakapan tiket (non-realtime — polling ringan tiap 10 dtk hanya saat tab aktif).
+// Percakapan tiket (non-realtime - polling ringan tiap 10 dtk hanya saat tab aktif).
 export default function TicketDetail({ ticket }: Props) {
   const form = useForm({ body: "" });
 
@@ -76,7 +76,7 @@ export default function TicketDetail({ ticket }: Props) {
             }`}
           >
             <p className="mb-1 text-xs font-semibold text-zinc-500">
-              {m.sender === "admin" ? "Admin" : "Anda"} — {m.created_at}
+              {m.sender === "admin" ? "Admin" : "Anda"} - {m.created_at}
             </p>
             <p className="whitespace-pre-wrap">{m.body}</p>
           </div>

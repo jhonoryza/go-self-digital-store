@@ -138,7 +138,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if loginBlocked(email, ip) {
-		jsonError(w, http.StatusTooManyRequests, "terlalu banyak kegagalan — coba lagi dalam 10 menit")
+		jsonError(w, http.StatusTooManyRequests, "terlalu banyak kegagalan - coba lagi dalam 10 menit")
 		return
 	}
 
@@ -203,8 +203,8 @@ func (s *Server) forgotPassword(w http.ResponseWriter, r *http.Request) {
 				body := mail.Style(s.Cfg.AppName,
 					`<p>Halo,</p><p>Ada permintaan reset password untuk akun Anda. Tautan berlaku 1 jam:</p>
 					 <p>`+mail.Button(link, "Reset Password")+`</p>
-					 <p style="color:#71717a;">Bukan Anda? Abaikan email ini — password tidak berubah.</p>`)
-				s.Mail.Send(email, "Reset password — "+s.Cfg.AppName, body)
+					 <p style="color:#71717a;">Bukan Anda? Abaikan email ini - password tidak berubah.</p>`)
+				s.Mail.Send(email, "Reset password - "+s.Cfg.AppName, body)
 			}()
 		}
 	}
@@ -245,7 +245,7 @@ func (s *Server) resetPassword(w http.ResponseWriter, r *http.Request) {
 	// token sekali pakai + putus semua sesi lama akun itu
 	s.DB.Exec(`DELETE FROM password_resets WHERE email=?`, email)
 	s.DB.Exec(`DELETE FROM sessions WHERE user_id=(SELECT id FROM users WHERE email=?)`, email)
-	s.flashOK(w, r, "/login", "Password diganti — silakan masuk.")
+	s.flashOK(w, r, "/login", "Password diganti - silakan masuk.")
 }
 
 // ---- util validasi ----

@@ -20,6 +20,13 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
   manual** di callback children (callback kustom menonaktifkan layout bawaan
   App); `CsrfSync` menyinkronkan token CSRF props → interceptor.
 - `src/types.ts` — SharedProps + helper `rupiah` (cermin helper Go).
+- `src/components/ThemeToggle.tsx` — toggle gelap/terang (localStorage
+  `theme`); **default gelap** diputuskan script inline di shell (Go
+  `rootTemplate` + `web/index.html`) sebelum paint.
+- `src/components/ProductTypeIcon.tsx` — ikon jenis produk (Package/KeyRound/
+  Link2) dari lucide-react; satu sumber untuk seluruh katalog.
+- `src/pages/Dev/LoginAs.tsx` — masuk sebagai akun mana pun (hanya bila
+  prop `dev_login` aktif; route Go tidak terdaftar tanpa `STORE_DEV_LOGIN=1`).
 - `src/lib/cart.ts` — keranjang localStorage (event `cart-change`); server
   memvalidasi ulang harga saat checkout.
 - `src/pages/{Public,Auth,Account,Admin}` — halaman; nama komponen = path
@@ -34,8 +41,14 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
   callback children App menerima satu objek `{Component, props, key}`.
 - **CSS wajib di-import dari entry** (`import "./css/app.css"` di app.tsx) —
   tanpa itu Vite 8 tidak meng-emit CSS sama sekali.
-- Tailwind v4 CSS-first: `@plugin "@tailwindcss/forms"`, `@custom-variant dark`,
-  tema brand (`brand` hijau pinus, `brass` kuningan) di `src/css/app.css`.
+- Tailwind v4 CSS-first: `@plugin "@tailwindcss/forms"`, `@custom-variant dark`
+  (strategy class; `<html>` diberi `class="dark"` default), tema brand
+  (`brand` hijau pinus, `brass` kuningan) di `src/css/app.css`, plus rule
+  `:focus-visible` global.
+- Ikon: **lucide-react satu keluarga untuk seluruh app** — larangan emoji
+  sebagai ikon dan SVG hand-rolled; `strokeWidth` bawaan (2).
+- Copy user-visible **tanpa em-dash (`—`)** — pakai hyphen atau pisah kalimat
+  (berlaku juga untuk pesan flash/email di sisi Go).
 - Halaman baru: buat file di `src/pages/<Domain>/<Nama>.tsx`, sematkan layout
   (`Nama.layout = (p) => <Layout>{p}</Layout>`), tambahkan route + handler Go
   (resolve dari glob otomatis).

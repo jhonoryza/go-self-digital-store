@@ -1,5 +1,6 @@
 import { Link, router, usePage } from "@inertiajs/react";
 import { type ReactNode } from "react";
+import ThemeToggle from "./ThemeToggle";
 import type { SharedProps } from "../types";
 
 // Layout konsol admin: header + tab nav.
@@ -37,6 +38,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-zinc-500">{auth_user?.email}</span>
+            <ThemeToggle />
             <Link href="/dashboard" className="rounded-lg border border-zinc-300 px-3 py-1.5 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
               Saya
             </Link>

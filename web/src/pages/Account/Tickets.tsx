@@ -46,7 +46,7 @@ export default function Tickets({ tickets }: Props) {
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${cls}`}>{label}</span>
                   </div>
                   <p className="mt-1 text-xs text-zinc-500">
-                    {t.order_no ? `Order ${t.order_no} — ` : ""}diperbarui {t.updated_at}
+                    {t.order_no ? `Order ${t.order_no} - ` : ""}diperbarui {t.updated_at}
                   </p>
                 </Link>
               );
@@ -76,7 +76,7 @@ export default function Tickets({ tickets }: Props) {
         </div>
         <div>
           <label htmlFor="order_no" className="mb-1 block text-sm font-medium">
-            Order terkait (opsional) — <span className="font-mono">ORD-…</span>
+            Order terkait (opsional) - <span className="font-mono">ORD-…</span>
           </label>
           <input
             id="order_no"

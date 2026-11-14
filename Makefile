@@ -8,7 +8,7 @@ tidy:
 	go mod tidy && cd web && bun install
 
 run: build
-	STORE_ADDR=:8080 ./store serve
+	STORE_ADDR=:8080 STORE_DEV_LOGIN=1 ./store serve
 
 migrate: build
 	./store migrate

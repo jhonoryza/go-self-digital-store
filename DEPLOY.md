@@ -53,6 +53,7 @@ server {
 | `STORE_COOKIE_SAMESITE` | `none` untuk split-origin (otomatis bila CORS origins diisi), `lax` same-origin |
 | `STORE_TRUSTED_PROXY` | `1` bila di belakang reverse proxy |
 | `STORE_BACKUP_KEEP` | jumlah backup SQLite disimpan (default 7) |
+| `STORE_DEV_LOGIN` | `1` mengaktifkan `/dev/login` (masuk sebagai akun mana pun tanpa password) — **jangan pernah di produksi** |
 
 ## 2. Frontend di Cloudflare Pages
 

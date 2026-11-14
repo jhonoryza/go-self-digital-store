@@ -37,7 +37,7 @@ export default function AdminMailLog({ logs }: Props) {
                     {l.status}
                   </span>
                 </td>
-                <td className="max-w-xs truncate px-4 py-2.5 text-xs text-zinc-500" title={l.error}>{l.error || "—"}</td>
+                <td className="max-w-xs truncate px-4 py-2.5 text-xs text-zinc-500" title={l.error}>{l.error || "-"}</td>
                 <td className="px-4 py-2.5 text-zinc-500">{l.created_at}</td>
               </tr>
             ))}
