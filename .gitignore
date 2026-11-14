@@ -12,3 +12,4 @@ web/dist/
 # go
 *.out
 coverage.out
+store
