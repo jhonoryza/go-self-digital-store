@@ -47,7 +47,16 @@ class CredentialsClient extends XhrHttpClient {
       }
       let body: XMLHttpRequestBodyInit | null = null;
       if (config.data !== null && config.data !== undefined) {
-        if (typeof config.data === "object") {
+        if (
+          config.data instanceof FormData ||
+          config.data instanceof Blob ||
+          config.data instanceof ArrayBuffer ||
+          config.data instanceof URLSearchParams ||
+          typeof config.data === "string"
+        ) {
+          // body mentah (FormData untuk upload berkas) — kirim apa adanya
+          body = config.data;
+        } else if (typeof config.data === "object") {
           body = JSON.stringify(config.data);
           if (!config.headers?.["Content-Type"] && !config.headers?.["content-type"]) {
             xhr.setRequestHeader("Content-Type", "application/json");

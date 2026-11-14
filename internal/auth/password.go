@@ -36,9 +36,10 @@ func HashPassword(plain string) (string, error) {
 }
 
 // VerifyPassword cocokkan plain password dengan hash encoded; constant-time.
+// Format: argon2id$v=1$m=...,t=...,p=...$salt$hash (5 segmen).
 func VerifyPassword(encoded, plain string) bool {
 	parts := strings.Split(encoded, "$")
-	if len(parts) != 6 || parts[0] != "argon2id" || parts[1] != "v=1" {
+	if len(parts) != 5 || parts[0] != "argon2id" || parts[1] != "v=1" {
 		return false
 	}
 	var m, t uint32

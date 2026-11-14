@@ -109,6 +109,26 @@ func (s *Server) routes() {
 	m.Handle("POST /callback/payment", s.limited("callback", http.HandlerFunc(s.paymentCallback)))
 	m.Handle("GET /dl/{order_no}/{item}", s.limited("download", http.HandlerFunc(s.download)))
 
+	// admin (role admin)
+	m.Handle("GET /admin", s.guardAdmin(s.adminDashboard))
+	m.Handle("GET /admin/users", s.guardAdmin(s.adminUsers))
+	m.Handle("GET /admin/orders", s.guardAdmin(s.adminOrders))
+	m.Handle("POST /admin/orders/{order_no}/paid", s.guardAdmin(s.adminOrderPaid))
+	m.Handle("POST /admin/orders/{order_no}/resend", s.guardAdmin(s.adminOrderResend))
+	m.Handle("GET /admin/produk", s.guardAdmin(s.adminProducts))
+	m.Handle("POST /admin/produk", s.guardAdmin(s.adminProductSave))
+	m.Handle("POST /admin/produk/{id}", s.guardAdmin(s.adminProductSave))
+	m.Handle("POST /admin/produk/{id}/keys", s.guardAdmin(s.adminProductKeys))
+	m.Handle("POST /admin/produk/{id}/toggle", s.guardAdmin(s.adminProductToggle))
+	m.Handle("GET /admin/maillog", s.guardAdmin(s.adminMailLog))
+	m.Handle("GET /admin/tiket", s.guardAdmin(s.adminTickets))
+	m.Handle("GET /admin/tiket/{id}", s.guardAdmin(s.adminTicketDetailPage))
+	m.Handle("POST /admin/tiket/{id}", s.guardAdmin(s.adminTicketReply))
+	m.Handle("POST /admin/tiket/{id}/close", s.guardAdmin(s.adminTicketClose))
+	m.Handle("GET /admin/gateway", s.guardAdmin(s.adminGateways))
+	m.Handle("POST /admin/gateway/config", s.guardAdmin(s.adminGatewayConfig))
+	m.Handle("POST /admin/gateway/activate", s.guardAdmin(s.adminGatewayActivate))
+
 	// aset Vite (mode shell-Go); produksi utama aset disajikan CF Pages.
 	m.HandleFunc("GET /assets/{path...}", s.serveAssets)
 
