@@ -59,6 +59,7 @@ func serve(cfg config.Config) {
 		defer t.Stop()
 		for range t.C {
 			web.Sweep()
+			srv.Maintain()
 			if cfg.SMTP.Enabled() {
 				if err := db.Backup(d, cfg.Dir, backupKeep()); err != nil {
 					log.Printf("backup: %v", err)

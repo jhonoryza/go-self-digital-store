@@ -185,14 +185,15 @@ type orderData struct {
 }
 
 type orderOutRow struct {
-	ID          int64  `json:"id"`
-	Title       string `json:"title"`
-	Price       int    `json:"price"`
-	Qty         int    `json:"qty"`
-	Type        string `json:"type"`
-	LicenseKey  string `json:"license_key,omitempty"`
-	ExtURL      string `json:"ext_url,omitempty"`
-	HasDownload bool   `json:"has_download"`
+	ID          int64    `json:"id"`
+	ProductID   int64    `json:"-"`
+	Title       string   `json:"title"`
+	Price       int      `json:"price"`
+	Qty         int      `json:"qty"`
+	Type        string   `json:"type"`
+	LicenseKeys []string `json:"license_keys,omitempty"`
+	ExtURL      string   `json:"ext_url,omitempty"`
+	HasDownload bool     `json:"has_download"`
 }
 
 // loadOrder muat order + items (dengan tipe produk untuk delivery).
@@ -204,21 +205,53 @@ func (s *Server) loadOrder(orderNo string) (orderData, bool) {
 	if err != nil {
 		return o, false
 	}
-	rows, err := s.DB.Query(`SELECT oi.id, oi.title, oi.price, oi.qty, p.type, oi.license_key, p.ext_url
+	// catatan: koneksi tunggal SQLite — JANGAN query bersarang saat rows terbuka;
+	// kumpulkan items dulu, kunci lisensi di-join sekali setelahnya.
+	rows, err := s.DB.Query(`SELECT oi.id, oi.product_id, oi.title, oi.price, oi.qty, p.type, p.ext_url
 		FROM order_items oi JOIN products p ON p.id = oi.product_id WHERE oi.order_id=? ORDER BY oi.id`, id)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var it orderOutRow
-			var extURL string
-			if err := rows.Scan(&it.ID, &it.Title, &it.Price, &it.Qty, &it.Type, &it.LicenseKey, &extURL); err == nil {
-				it.HasDownload = it.Type == "file"
-				if o.Status == "paid" && it.Type == "link" {
-					it.ExtURL = extURL
-				}
-				o.Items = append(o.Items, it)
-			}
+	if err != nil {
+		logErr("loadOrder items %s: %v", orderNo, err)
+		return o, true
+	}
+	keysByItem := map[int64][]string{}
+	type itemRaw struct {
+		orderOutRow
+		extURL string
+	}
+	var raws []itemRaw
+	for rows.Next() {
+		var it itemRaw
+		if err := rows.Scan(&it.ID, &it.ProductID, &it.Title, &it.Price, &it.Qty, &it.Type, &it.extURL); err == nil {
+			raws = append(raws, it)
 		}
+	}
+	rows.Close()
+
+	if o.Status == "paid" {
+		krows, kerr := s.DB.Query(`SELECT k.order_item_id, k.key FROM license_keys k
+			JOIN order_items oi ON oi.id = k.order_item_id WHERE oi.order_id=? ORDER BY k.id`, id)
+		if kerr == nil {
+			for krows.Next() {
+				var iid int64
+				var k string
+				if krows.Scan(&iid, &k) == nil {
+					keysByItem[iid] = append(keysByItem[iid], k)
+				}
+			}
+			krows.Close()
+		}
+	}
+
+	for _, it := range raws {
+		out := it.orderOutRow
+		out.HasDownload = out.Type == "file"
+		if o.Status == "paid" {
+			if out.Type == "link" {
+				out.ExtURL = it.extURL
+			}
+			out.LicenseKeys = keysByItem[out.ID]
+		}
+		o.Items = append(o.Items, out)
 	}
 	return o, true
 }
@@ -377,6 +410,3 @@ func (s *Server) markOrderPaid(orderNo string, r *http.Request, paidAmt int) boo
 	s.onOrderPaid(orderNo, r)
 	return true
 }
-
-// onOrderPaid efek samping pelunasan (delivery email, dl, kunci) — delivery.go.
-func (s *Server) onOrderPaid(orderNo string, r *http.Request) {}

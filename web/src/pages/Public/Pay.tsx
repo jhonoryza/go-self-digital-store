@@ -10,7 +10,7 @@ interface OrderItem {
   price: number;
   qty: number;
   type: string;
-  license_key?: string;
+  license_keys?: string[];
   ext_url?: string;
   has_download: boolean;
 }
@@ -125,11 +125,11 @@ export default function Pay({ order, token, simulasi }: Props) {
           {(order.items ?? []).map((i) => (
             <div key={i.id} className="rounded-xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-900 dark:bg-brand-950">
               <p className="font-semibold">{i.title}</p>
-              {i.license_key && (
-                <p className="mt-1 text-sm">
-                  Kunci lisensi: <span className="rounded bg-white px-2 py-1 font-mono font-bold dark:bg-zinc-900">{i.license_key}</span>
+              {(i.license_keys ?? []).map((k) => (
+                <p key={k} className="mt-1 text-sm">
+                  Kunci lisensi: <span className="rounded bg-white px-2 py-1 font-mono font-bold dark:bg-zinc-900">{k}</span>
                 </p>
-              )}
+              ))}
               {i.ext_url && (
                 <a href={i.ext_url} className="mt-1 inline-block text-sm font-semibold text-brand-700 hover:underline dark:text-brand-400">
                   Buka produk →
