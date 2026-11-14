@@ -165,3 +165,13 @@ func Guard(db *sql.DB, cfg CookieConfig, requireAdmin bool, next func(w http.Res
 func IsInertiaXHR(r *http.Request) bool {
 	return r.Header.Get("X-Inertia") != "" || strings.HasPrefix(r.Header.Get("X-Requested-With"), "XMLHttpRequest")
 }
+
+// DeleteOtherSessions putus semua sesi user kecuali sesi pada request ini
+// (dipakai saat ganti password).
+func DeleteOtherSessions(db *sql.DB, r *http.Request, userID int64) {
+	raw := sessionRawToken(r)
+	if raw == "" {
+		return
+	}
+	db.Exec(`DELETE FROM sessions WHERE user_id=? AND token<>?`, userID, hashToken(raw))
+}

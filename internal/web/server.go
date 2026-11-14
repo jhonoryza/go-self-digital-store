@@ -6,6 +6,7 @@ package web
 import (
 	"database/sql"
 	"net/http"
+	neturl "net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,6 +50,13 @@ func (s *Server) originAllowed(r *http.Request, origin string) bool {
 			return true
 		}
 	}
+	// dev tanpa CORS: izinkan origin localhost (vite proxy meneruskan Origin asli)
+	if len(s.Cfg.CorsOrigins) == 0 {
+		if u, err := neturl.Parse(origin); err == nil &&
+			(u.Hostname() == "localhost" || u.Hostname() == "127.0.0.1") {
+			return true
+		}
+	}
 	host := r.Host
 	if s.Cfg.BaseURL != "" {
 		host = strings.TrimPrefix(strings.TrimPrefix(s.Cfg.BaseURL, "https://"), "http://")
@@ -70,6 +78,23 @@ func (s *Server) routes() {
 
 	// health
 	m.HandleFunc("GET /healthz", s.healthz)
+
+	// auth
+	m.Handle("GET /login", s.limited("login", http.HandlerFunc(s.loginPage)))
+	m.Handle("POST /login", s.limited("login", http.HandlerFunc(s.login)))
+	m.Handle("GET /register", s.limited("register", http.HandlerFunc(s.registerPage)))
+	m.Handle("POST /register", s.limited("register", http.HandlerFunc(s.register)))
+	m.Handle("POST /logout", s.guardAuth(s.logout))
+	m.Handle("GET /lupa-password", s.limited("reset", http.HandlerFunc(s.forgotPage)))
+	m.Handle("POST /lupa-password", s.limited("reset", http.HandlerFunc(s.forgotPassword)))
+	m.HandleFunc("GET /reset-password", s.resetPage)
+	m.Handle("POST /reset-password", s.limited("reset", http.HandlerFunc(s.resetPassword)))
+
+	// akun (Guard user)
+	m.Handle("GET /dashboard", s.guardAuth(s.dashboard))
+	m.Handle("GET /profil", s.guardAuth(s.profilePage))
+	m.Handle("POST /profil", s.guardAuth(s.updateProfile))
+	m.Handle("POST /profil/password", s.guardAuth(s.changePassword))
 
 	// aset Vite (mode shell-Go); produksi utama aset disajikan CF Pages.
 	m.HandleFunc("GET /assets/{path...}", s.serveAssets)

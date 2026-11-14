@@ -12,14 +12,15 @@ import type { SharedProps } from "./types";
 
 const pageFiles = import.meta.glob("./pages/**/*.tsx");
 
-type ResolvedPage = { default: ComponentType & { layout?: (p: ReactNode) => ReactNode } };
+// Komponen halaman Inertia — boleh menyematkan layout persisten (.layout).
+type PageComponent = ComponentType<any> & { layout?: (p: ReactNode) => ReactNode };
 
-async function resolve(name: string, _page?: Page<SharedPageProps>): Promise<ResolvedPage> {
-  const mod = (await pageFiles[`./pages/${name}.tsx`]()) as ResolvedPage;
+async function resolve(name: string, _page?: Page<SharedPageProps>): Promise<PageComponent> {
+  const mod = (await pageFiles[`./pages/${name}.tsx`]()) as { default: PageComponent };
   if (!mod.default.layout) {
     mod.default.layout = (p) => p; // tanpa layout khusus
   }
-  return mod;
+  return mod.default;
 }
 
 // Sinkronkan token CSRF dari props halaman (berubah tiap render).
@@ -39,7 +40,7 @@ createInertiaApp<SharedProps>({
   setup({ el, App, props }) {
     createRoot(el).render(
       <App {...props}>
-        {(Component, pageProps) => (
+        {({ Component, props: pageProps }) => (
           <>
             <CsrfSync />
             <Component {...pageProps} />

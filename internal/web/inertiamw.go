@@ -9,10 +9,54 @@ package web
 // terlambat setelah status 200 terkirim.
 
 import (
+	"encoding/json"
+	"io"
 	"net/http"
+	"strconv"
+	"strings"
 
 	inertia "github.com/romsar/gonertia/v3"
 )
+
+// maxBodyJSON batas body JSON Inertia.
+const maxBodyJSON = 1 << 20
+
+// mergeJSONBody: klien Inertia v3 mengirim form sebagai JSON — isi r.PostForm
+// dari body agar handler bisa memakai r.PostFormValue seperti form-encoded.
+func mergeJSONBody(r *http.Request) {
+	if r.Method == http.MethodGet || !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		return
+	}
+	b, err := io.ReadAll(io.LimitReader(r.Body, maxBodyJSON))
+	if err != nil {
+		return
+	}
+	r.Body = io.NopCloser(strings.NewReader(string(b)))
+	var m map[string]any
+	if json.Unmarshal(b, &m) != nil {
+		return
+	}
+	r.ParseForm()
+	for k, v := range m {
+		switch vv := v.(type) {
+		case string:
+			r.PostForm.Set(k, vv)
+		case float64:
+			r.PostForm.Set(k, strconv.FormatFloat(vv, 'f', -1, 64))
+		case bool:
+			r.PostForm.Set(k, strconv.FormatBool(vv))
+		case []any:
+			for _, item := range vv {
+				switch it := item.(type) {
+				case string:
+					r.PostForm.Add(k, it)
+				case float64:
+					r.PostForm.Add(k, strconv.FormatFloat(it, 'f', -1, 64))
+				}
+			}
+		}
+	}
+}
 
 // bufferedResponse menahan header/status/body untuk diputuskan belakangan.
 type bufferedResponse struct {
@@ -51,6 +95,7 @@ func (s *Server) inertiaMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		mergeJSONBody(r)
 		w2 := newBufferedResponse()
 		next.ServeHTTP(w2, r)
 
