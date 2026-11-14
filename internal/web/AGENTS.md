@@ -62,8 +62,17 @@ request asing ditolak sebelum di-buffer.
 
 ## Verification
 
-- `go test ./internal/web/ -race` — 6 suite: auth/lockout/reset, checkout→
-  webhook tripay ber-signature→delivery→unduhan, tiket, admin guard.
+- `go test ./internal/web/ -race` — dua kelompok:
+  - **server_test.go** (6 suite): auth/lockout/reset, checkout→webhook tripay
+    ber-signature→delivery→unduhan, tiket, admin guard.
+  - **e2e_test.go** (11 suite): halaman publik, auth validasi+guard sesi+logout,
+    profil+ganti password (sesi lain putus), dashboard/pesanan/invoice,
+    validasi checkout+kupon, pembayaran simulasi (payNow/stok habis/idempoten),
+    webhook tripay negatif (EXPIRED/nominal beda/order tak dikenal/fail-closed),
+    guard unduhan /dl, siklus tiket penuh (closed, akses silang), konsol admin
+    (produk multipart CRUD, stok kunci, toggle, order manual/resend, gateway
+    masked), middleware keamanan (secHeaders/origin/CSRF/rate limit/versi
+    Inertia/CORS), plus alur lintas fitur beli→tiket→invoice.
 - `make test` = vet + test + typecheck + build web.
 
 ## Child DOX Index
