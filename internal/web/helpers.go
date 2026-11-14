@@ -9,6 +9,7 @@ import (
 	"net/http"
 	neturl "net/url"
 	"strconv"
+	"strings"
 
 	inertia "github.com/romsar/gonertia/v3"
 
@@ -36,24 +37,24 @@ func audit(db *sql.DB, action, target, detail string) {
 	db.Exec(`INSERT INTO audit_log (action, target, detail) VALUES (?,?,?)`, action, target, detail)
 }
 
-// rupiah format IDR gaya Indonesia (1.250.000).
+// rupiah format IDR gaya Indonesia (1.250.000) — kelompok 3 digit dari kanan.
 func rupiah(n int) string {
 	neg := n < 0
 	if neg {
 		n = -n
 	}
-	s := strconv.Itoa(n)
-	start := len(s) % 3
-	if start > 0 && len(s) > 3 {
-		s = s[:start] + "." + s[start:]
-	}
-	for i := start + 3; i < len(s); i += 4 {
-		s = s[:i] + "." + s[i:]
+	digits := strconv.Itoa(n)
+	var b strings.Builder
+	for i, c := range digits {
+		if i > 0 && (len(digits)-i)%3 == 0 {
+			b.WriteByte('.')
+		}
+		b.WriteRune(c)
 	}
 	if neg {
-		return "-Rp" + s
+		return "-Rp" + b.String()
 	}
-	return "Rp" + s
+	return "Rp" + b.String()
 }
 
 // truncate potong string untuk pesan error/log.

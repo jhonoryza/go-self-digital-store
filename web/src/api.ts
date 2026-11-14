@@ -104,7 +104,10 @@ http.onRequest((cfg) => {
   const url = absoluteUrl(cfg.url);
   const method = cfg.method.toUpperCase();
   const headers = { ...(cfg.headers ?? {}) };
-  if (method !== "GET" && method !== "HEAD" && csrf && !isAbsolute(url)) {
+  // Inertia v3 mengirim cfg.url sudah absolut (resolved terhadap origin) walau
+  // same-origin — jangan gate pada !isAbsolute, semua visit tulis ke API kita
+  // wajib membawa X-CSRF-Token (turunan sesi API) agar Guard server lolos.
+  if (method !== "GET" && method !== "HEAD" && csrf) {
     headers["X-CSRF-Token"] = csrf;
   }
   return { ...cfg, url, headers };

@@ -48,6 +48,14 @@ request asing ditolak sebelum di-buffer.
 - `publicOrigin(r)` = CORS origin pertama (frontend) fallback BaseURL — dipakai
   untuk semua URL yang dibuka manusia (ReturnURL gateway, tautan email).
   `baseURL(r)` = origin API (webhook, link unduhan di email).
+- **Versi Inertia selalu md5**: gonertia menyimpan `md5(WithVersion(arg))` — JSON
+  halaman mengirim hasil md5 itu. `NewInertia` mengembalikan versi yang SUDAH
+  di-md5 (`inertiaVersion`) supaya `s.Version` (dipakai inertiamw membandingkan
+  header `X-Inertia-Version`) identik dengan yang dilihat klien. Jangan
+  membandingkan versi mentah — semua GET ber-version akan 409 selamanya.
+- Route GET `/keranjang` & `/checkout` wajib ada di `routes()` meski halamannya
+  murni klien (isi keranjang di localStorage) — navbar & flash checkout
+  mengarah ke sana; di mode shell Go tanpa route = 404.
 
 ## Work Guidance
 

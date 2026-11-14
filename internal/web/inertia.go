@@ -8,6 +8,7 @@ package web
 // JSON (lihat web/src/api.ts); shell Go dipakai dev/single-origin & fallback.
 
 import (
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -88,8 +89,8 @@ func resolveAssets() shellAssets {
 // NewInertia bangun instance gonertia; kembalikan juga versi aset
 // (dipakai header X-Inertia-Version).
 func NewInertia(cfg config.Config) (*inertia.Inertia, string) {
-	version := assetVersion()
-	i, err := inertia.New(rootTemplate, inertia.WithVersion(version))
+	version := inertiaVersion(assetVersion())
+	i, err := inertia.New(rootTemplate, inertia.WithVersion(assetVersion()))
 	if err != nil {
 		log.Fatalf("inertia: %v", err)
 	}
@@ -102,6 +103,14 @@ func NewInertia(cfg config.Config) (*inertia.Inertia, string) {
 	i.ShareTemplateData("hmrURL", assets.HMR)
 
 	return i, version
+}
+
+// inertiaVersion cermin cara gonertia menyimpan versi (md5 hex argumen) —
+// middleware pembanding X-Inertia-Version wajib memakai nilai yang sama
+// persis dengan yang dikirim di JSON halaman, bukan versi mentah.
+func inertiaVersion(v string) string {
+	sum := md5.Sum([]byte(v))
+	return hex.EncodeToString(sum[:])
 }
 
 // assetVersion "dev" saat hot reload; hash manifest saat bundled.

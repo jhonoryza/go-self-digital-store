@@ -28,11 +28,6 @@ export interface Product {
 // format rupiah gaya Indonesia (cermin helper Go rupiah).
 export function rupiah(n: number): string {
   const neg = n < 0;
-  let s = Math.abs(n).toString();
-  const start = s.length % 3;
-  if (start > 0 && s.length > 3) s = s.slice(0, start) + "." + s.slice(start);
-  for (let i = start + 3; i < s.length; i += 4) {
-    s = s.slice(0, i) + "." + s.slice(i);
-  }
+  const s = Math.abs(n).toLocaleString("id-ID"); // pemisah ribuan "."
   return (neg ? "-Rp" : "Rp") + s;
 }

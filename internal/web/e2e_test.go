@@ -282,6 +282,18 @@ func TestE2EPublicPages(t *testing.T) {
 		}
 	}
 
+	// keranjang: halaman wadah (isi keranjang hidup di localStorage klien)
+	page = doPage(t, newClient(), ts.URL+"/keranjang")
+	if page["component"] != "Public/Cart" {
+		t.Errorf("/keranjang = component %v, mau Public/Cart", page["component"])
+	}
+
+	// halaman checkout (form submit ke POST /checkout)
+	page = doPage(t, newClient(), ts.URL+"/checkout")
+	if page["component"] != "Public/Checkout" {
+		t.Errorf("/checkout = component %v, mau Public/Checkout", page["component"])
+	}
+
 	// flash query ?ok= / ?err= masuk props
 	page = doPage(t, newClient(), ts.URL+"/produk?ok=halo&err=waduh")
 	flash := prop(t, page)["flash"].(map[string]any)
@@ -1257,10 +1269,22 @@ func TestE2ESecurityMiddleware(t *testing.T) {
 		t.Errorf("rate limit tidak terpicu dalam 5 request (pertama di %d)", first429)
 	}
 
+	// versi Inertia sesuai JSON halaman (dulu s.Version dibandingkan mentah —
+	// gonertia menyimpan md5-nya — sehingga semua GET ber-version selalu 409)
+	vpage := doPage(t, newClient(), ts.URL+"/produk")
+	servedVersion := fmt.Sprint(vpage["version"])
+	res = doGetRes(t, newClient(), ts.URL+"/produk?ok=1", map[string]string{
+		"X-Inertia":         "true",
+		"X-Inertia-Version": servedVersion,
+	})
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("GET dgn versi benar = %d, mau 200 (versi dilayani %q)", res.StatusCode, servedVersion)
+	}
+
 	// versi Inertia salah → 409 + X-Inertia-Location path-relative
 	res = doGetRes(t, newClient(), ts.URL+"/produk?ok=1", map[string]string{
 		"X-Inertia":         "true",
-		"X-Inertia-Version": "versi-beda",
+		"X-Inertia-Version": servedVersion + "x",
 	})
 	if res.StatusCode != http.StatusConflict || res.Header.Get("X-Inertia-Location") != "/produk?ok=1" {
 		t.Errorf("versi beda = %d %s", res.StatusCode, res.Header.Get("X-Inertia-Location"))
@@ -1306,6 +1330,26 @@ func TestE2ESecurityMiddleware(t *testing.T) {
 			`{"email":"hantu@uji.id","password":"salah1234"}`, "https://toko.example")
 		if r2.StatusCode != http.StatusOK {
 			t.Fatalf("login via XFF = %d", r2.StatusCode)
+		}
+	}
+}
+
+// ---- unit: format rupiah (bug lama: 59000 → "Rp59.00.0") ----
+
+func TestE2ERupiahFormat(t *testing.T) {
+	cases := map[int]string{
+		0:         "Rp0",
+		5:         "Rp5",
+		100:       "Rp100",
+		1000:      "Rp1.000",
+		59000:     "Rp59.000",
+		1250000:   "Rp1.250.000",
+		123456789: "Rp123.456.789",
+		-99000:    "-Rp99.000",
+	}
+	for in, want := range cases {
+		if got := rupiah(in); got != want {
+			t.Errorf("rupiah(%d) = %q, mau %q", in, got, want)
 		}
 	}
 }

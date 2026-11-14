@@ -73,6 +73,14 @@ func (s *Server) routes() {
 	m.HandleFunc("GET /{$}", s.landing)
 	m.HandleFunc("GET /produk", s.productsList)
 	m.HandleFunc("GET /produk/{slug}", s.productDetail)
+	m.HandleFunc("GET /keranjang", func(w http.ResponseWriter, r *http.Request) {
+		// isi keranjang hidup di localStorage klien — halaman cuma wadah
+		s.Page(w, r, "Public/Cart", inertia.Props{})
+	})
+	m.HandleFunc("GET /checkout", func(w http.ResponseWriter, r *http.Request) {
+		// form checkout membaca isi keranjang localStorage; submit POST /checkout
+		s.Page(w, r, "Public/Checkout", inertia.Props{})
+	})
 	m.HandleFunc("GET /privacy", func(w http.ResponseWriter, r *http.Request) { s.Page(w, r, "Public/Policy", inertia.Props{"kind": "privacy"}) })
 	m.HandleFunc("GET /ketentuan", func(w http.ResponseWriter, r *http.Request) { s.Page(w, r, "Public/Policy", inertia.Props{"kind": "terms"}) })
 
