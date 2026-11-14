@@ -1,7 +1,8 @@
 import { router, useForm } from "@inertiajs/react";
+import { ImagePlus, X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import AdminLayout from "../../components/AdminLayout";
-import { rupiah, type SharedProps } from "../../types";
+import { rupiah, type ProductImage, type SharedProps } from "../../types";
 
 interface Product {
   id: number;
@@ -20,9 +21,14 @@ interface Product {
 
 interface Props extends SharedProps {
   products: Product[];
+  // peta product_id (string) -> daftar gambar dari bucket R2
+  images: Record<string, ProductImage[]>;
 }
 
-export default function AdminProducts({ products }: Props) {
+const MAX_IMAGES = 5;
+const MAX_IMAGE_BYTES = 2 << 20;
+
+export default function AdminProducts({ products, images }: Props) {
   const [editing, setEditing] = useState<number | null>(null); // id produk yg form-nya terbuka
   const [showCreate, setShowCreate] = useState(false);
   const createForm = useRef<HTMLInputElement>(null);
@@ -62,6 +68,7 @@ export default function AdminProducts({ products }: Props) {
                   <span className="font-mono">{p.slug}</span> - {p.type} - {rupiah(p.price)}
                   {p.type === "key" && ` - stok kunci: ${p.key_count}`}
                   {p.type === "file" && p.file_name && ` - ${p.file_name}`}
+                  {(images[String(p.id)]?.length ?? 0) > 0 && ` - ${images[String(p.id)].length} gambar` }
                 </p>
               </div>
               <div className="flex gap-2">
@@ -81,7 +88,13 @@ export default function AdminProducts({ products }: Props) {
             </div>
             {editing === p.id && (
               <div className="border-t border-zinc-200 p-4 dark:border-zinc-800">
-                <ProductForm key={p.id} title={`Edit: ${p.title}`} product={p} onDone={() => setEditing(null)} />
+                <ProductForm
+                  key={p.id}
+                  title={`Edit: ${p.title}`}
+                  product={p}
+                  images={images[String(p.id)] ?? []}
+                  onDone={() => setEditing(null)}
+                />
               </div>
             )}
           </div>
@@ -100,10 +113,12 @@ export default function AdminProducts({ products }: Props) {
 function ProductForm({
   title,
   product,
+  images = [],
   onDone,
 }: {
   title: string;
   product: Product | null;
+  images?: ProductImage[];
   onDone: () => void;
 }) {
   const form = useForm({
@@ -210,6 +225,8 @@ function ProductForm({
         </div>
       </form>
 
+      {product && <ImageManager productId={product.id} images={images} />}
+
       {product?.type === "key" && (
         <form
           onSubmit={(e) => {
@@ -236,3 +253,84 @@ function ProductForm({
 }
 
 AdminProducts.layout = (page: ReactNode) => <AdminLayout>{page}</AdminLayout>;
+
+// ImageManager kelola gambar produk di bucket R2 (maks 5, jpg/png/webp, 2 MB).
+function ImageManager({ productId, images }: { productId: number; images: ProductImage[] }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const remaining = MAX_IMAGES - images.length;
+
+  const upload = () => {
+    const files = inputRef.current?.files;
+    if (!files || files.length === 0) return;
+    if (files.length > remaining) {
+      alert(`Sisa slot gambar ${remaining}.`);
+      return;
+    }
+    for (const f of files) {
+      if (f.size > MAX_IMAGE_BYTES) {
+        alert(`${f.name} melebihi 2 MB.`);
+        return;
+      }
+    }
+    const fd = new FormData();
+    for (const f of files) fd.append("images", f);
+    setBusy(true);
+    router.post(`/admin/produk/${productId}/images`, fd, {
+      onSuccess: () => {
+        if (inputRef.current) inputRef.current.value = "";
+      },
+      onFinish: () => setBusy(false),
+    });
+  };
+
+  const remove = (img: ProductImage) => {
+    router.post(`/admin/produk/${productId}/images/${img.id}/delete`);
+  };
+
+  return (
+    <div className="mt-4 rounded-lg border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
+      <p className="mb-3 text-xs font-medium">
+        Gambar produk (maks {MAX_IMAGES}) - saat ini {images.length}
+      </p>
+      {images.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {images.map((img) => (
+            <div key={img.id} className="group relative">
+              <img src={img.url} alt="" className="h-16 w-16 rounded-lg object-cover" />
+              <button
+                onClick={() => remove(img)}
+                aria-label="Hapus gambar"
+                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-white shadow hover:bg-red-700"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {remaining > 0 ? (
+        <div className="flex items-center gap-2">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            className="block w-full text-xs text-zinc-500 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold hover:file:bg-zinc-200 dark:file:bg-zinc-800 dark:file:text-zinc-200"
+            aria-label="Pilih gambar"
+          />
+          <button
+            onClick={upload}
+            disabled={busy}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-zinc-900"
+          >
+            <ImagePlus className="h-3.5 w-3.5" />
+            {busy ? "Mengunggah…" : "Unggah"}
+          </button>
+        </div>
+      ) : (
+        <p className="text-xs text-zinc-500">Slot gambar penuh - hapus salah satu untuk mengganti.</p>
+      )}
+    </div>
+  );
+}

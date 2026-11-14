@@ -143,8 +143,8 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var u struct {
-		ID    int64
-		Pass  string
+		ID   int64
+		Pass string
 	}
 	err := s.DB.QueryRow(`SELECT id, password FROM users WHERE email=?`, email).Scan(&u.ID, &u.Pass)
 	if err == sql.ErrNoRows {

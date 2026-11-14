@@ -29,6 +29,7 @@ request asing ditolak sebelum di-buffer.
 | `server_test.go` | test integrasi (bootstrap `testServer`: SQLite temp-dir nyata + httptest) |
 | `e2e_test.go` | test E2E per fitur (publik, auth, profil, checkout, webhook, unduhan, tiket, admin, middleware) |
 | `dev.go` | dev login-as (`/dev/login`, hanya bila `STORE_DEV_LOGIN=1`; route tidak terdaftar bila mati) |
+| `images.go` | gambar produk: upload/hapus ke R2 (minio-go, prefix per-app di bucket `webapp`), proxy `GET /images/{key...}` hanya untuk prefix app; `imageStore` interface (stub di test) |
 
 ## Local Contracts
 
@@ -50,6 +51,7 @@ request asing ditolak sebelum di-buffer.
 - `publicOrigin(r)` = CORS origin pertama (frontend) fallback BaseURL — dipakai
   untuk semua URL yang dibuka manusia (ReturnURL gateway, tautan email).
   `baseURL(r)` = origin API (webhook, link unduhan di email).
+- **Gambar produk**: handler upload wajib sniff `http.DetectContentType` (bukan percaya header klien), batas 2 MB/file & 5 file/produk, hapus objek R2 saat baris gagal dibuat; proxy menolak key di luar prefix app.
 - **Versi Inertia selalu md5**: gonertia menyimpan `md5(WithVersion(arg))` — JSON
   halaman mengirim hasil md5 itu. `NewInertia` mengembalikan versi yang SUDAH
   di-md5 (`inertiaVersion`) supaya `s.Version` (dipakai inertiamw membandingkan

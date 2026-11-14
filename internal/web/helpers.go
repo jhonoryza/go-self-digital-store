@@ -134,6 +134,7 @@ type Server struct {
 	Cfg     config.Config
 	Mail    *mail.Mailer
 	I       *inertia.Inertia
-	Version string // versi aset untuk X-Inertia-Version
+	Version string     // versi aset untuk X-Inertia-Version
+	Images  imageStore // gambar produk ke R2; nil bila belum dikonfigurasi
 	Mux     http.Handler
 }

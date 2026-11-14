@@ -10,6 +10,7 @@ export interface CartItem {
   price: number;
   qty: number;
   type: string;
+  image_url?: string; // gambar pertama produk (snapshot saat ditambahkan)
 }
 
 const KEY = "store_cart";
@@ -35,7 +36,7 @@ export function addToCart(p: Product) {
   if (found) {
     found.qty = Math.min(found.qty + 1, 10);
   } else {
-    items.push({ id: p.id, slug: p.slug, title: p.title, price: p.price, qty: 1, type: p.type });
+    items.push({ id: p.id, slug: p.slug, title: p.title, price: p.price, qty: 1, type: p.type, image_url: p.image_url });
   }
   save(items);
 }

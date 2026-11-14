@@ -56,14 +56,14 @@ func (s *Server) adminDashboard(w http.ResponseWriter, r *http.Request, u auth.U
 
 	s.Page(w, r, "Admin/Dashboard", inertia.Props{
 		"stats": map[string]any{
-			"revenue":       revenue,
-			"orders_paid":   ordersPaid,
+			"revenue":        revenue,
+			"orders_paid":    ordersPaid,
 			"orders_pending": ordersPending,
-			"users":         users,
-			"tickets_open":  ticketsOpen,
-			"mail_error":    mailErr,
-			"license_free":  licenseFree,
-			"license_sold":  licenseSold,
+			"users":          users,
+			"tickets_open":   ticketsOpen,
+			"mail_error":     mailErr,
+			"license_free":   licenseFree,
+			"license_sold":   licenseSold,
 		},
 		"recent": recent,
 		"flash":  flashFromQuery(r),
@@ -170,7 +170,7 @@ func (s *Server) adminProducts(w http.ResponseWriter, r *http.Request, u auth.Us
 			})
 		}
 	}
-	s.Page(w, r, "Admin/Products", inertia.Props{"products": products, "flash": flashFromQuery(r)})
+	s.Page(w, r, "Admin/Products", inertia.Props{"products": products, "images": s.allProductImages(r), "flash": flashFromQuery(r)})
 }
 
 // adminProductSave POST /admin/produk (create) dan /admin/produk/{id} (update).
@@ -492,4 +492,3 @@ func (s *Server) adminGatewayActivate(w http.ResponseWriter, r *http.Request, u 
 	audit(s.DB, "gateway.activate", name, "oleh "+u.Email)
 	s.flashOK(w, r, "/admin/gateway", "Gateway aktif: "+name)
 }
-

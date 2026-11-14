@@ -1,7 +1,7 @@
 import { Link } from "@inertiajs/react";
 import { useEffect, useState, type ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
-import ProductTypeIcon from "../../components/ProductTypeIcon";
+import ProductThumb from "../../components/ProductThumb";
 import { cartTotal, getCart, removeFromCart, setQty, type CartItem } from "../../lib/cart";
 import { rupiah, type SharedProps } from "../../types";
 
@@ -32,9 +32,7 @@ export default function Cart({}: SharedProps) {
         <div className="space-y-4">
           {items.map((i) => (
             <div key={i.id} className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-brand-50 text-2xl dark:bg-brand-950">
-                <ProductTypeIcon type={i.type} className="h-6 w-6" />
-              </div>
+              <ProductThumb product={i} className="h-14 w-14 shrink-0" iconClassName="h-5 w-5" />
               <div className="min-w-0 flex-1">
                 <Link href={`/produk/${i.slug}`} className="font-semibold hover:text-brand-700">{i.title}</Link>
                 <p className="text-sm text-zinc-500">{rupiah(i.price)}</p>

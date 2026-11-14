@@ -21,7 +21,7 @@ import (
 // New bangun Server lengkap beserta rantai middleware:
 // recover -> secHeaders -> cors -> originCheck -> inertia -> mux.
 func New(db *sql.DB, cfg config.Config, ml *mail.Mailer, i *inertia.Inertia, version string) *Server { //nolint:revive
-	s := &Server{DB: db, Cfg: cfg, Mail: ml, I: i, Version: version}
+	s := &Server{DB: db, Cfg: cfg, Mail: ml, I: i, Version: version, Images: newR2Store(cfg.R2)}
 	s.routes()
 	s.Mux = recover500(s.secHeaders(s.cors(s.originCheck(s.inertiaMiddleware(s.Mux)))))
 	return s
@@ -81,8 +81,12 @@ func (s *Server) routes() {
 		// form checkout membaca isi keranjang localStorage; submit POST /checkout
 		s.Page(w, r, "Public/Checkout", inertia.Props{})
 	})
-	m.HandleFunc("GET /privacy", func(w http.ResponseWriter, r *http.Request) { s.Page(w, r, "Public/Policy", inertia.Props{"kind": "privacy"}) })
-	m.HandleFunc("GET /ketentuan", func(w http.ResponseWriter, r *http.Request) { s.Page(w, r, "Public/Policy", inertia.Props{"kind": "terms"}) })
+	m.HandleFunc("GET /privacy", func(w http.ResponseWriter, r *http.Request) {
+		s.Page(w, r, "Public/Policy", inertia.Props{"kind": "privacy"})
+	})
+	m.HandleFunc("GET /ketentuan", func(w http.ResponseWriter, r *http.Request) {
+		s.Page(w, r, "Public/Policy", inertia.Props{"kind": "terms"})
+	})
 
 	// health
 	m.HandleFunc("GET /healthz", s.healthz)
@@ -133,6 +137,8 @@ func (s *Server) routes() {
 	m.Handle("POST /admin/produk", s.guardAdmin(s.adminProductSave))
 	m.Handle("POST /admin/produk/{id}", s.guardAdmin(s.adminProductSave))
 	m.Handle("POST /admin/produk/{id}/keys", s.guardAdmin(s.adminProductKeys))
+	m.Handle("POST /admin/produk/{id}/images", s.guardAdmin(s.adminProductImages))
+	m.Handle("POST /admin/produk/{id}/images/{image_id}/delete", s.guardAdmin(s.adminProductImageDelete))
 	m.Handle("POST /admin/produk/{id}/toggle", s.guardAdmin(s.adminProductToggle))
 	m.Handle("GET /admin/maillog", s.guardAdmin(s.adminMailLog))
 	m.Handle("GET /admin/tiket", s.guardAdmin(s.adminTickets))
@@ -145,6 +151,9 @@ func (s *Server) routes() {
 
 	// aset Vite (mode shell-Go); produksi utama aset disajikan CF Pages.
 	m.HandleFunc("GET /assets/{path...}", s.serveAssets)
+
+	// gambar produk dari bucket R2 (proxy bila tanpa domain publik)
+	m.HandleFunc("GET /images/{key...}", s.productImageProxy)
 
 	s.Mux = m
 }

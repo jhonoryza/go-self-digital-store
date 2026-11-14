@@ -54,6 +54,9 @@ server {
 | `STORE_TRUSTED_PROXY` | `1` bila di belakang reverse proxy |
 | `STORE_BACKUP_KEEP` | jumlah backup SQLite disimpan (default 7) |
 | `STORE_DEV_LOGIN` | `1` mengaktifkan `/dev/login` (masuk sebagai akun mana pun tanpa password) — **jangan pernah di produksi** |
+| `STORE_R2_ENDPOINT/ACCESS_KEY/SECRET_KEY` | Cloudflare R2 untuk gambar produk; kosong = fallback kredensial dari `~/.mc/config.json` (alias `r2`) — cocok untuk dev, produksi isi env |
+| `STORE_R2_BUCKET` | nama bucket bersama (default `webapp`); objek di bawah prefix `STORE_R2_PREFIX` (default `go-self-digital-store`) |
+| `STORE_R2_PUBLIC_BASE` | opsional domain publik bucket (r2.dev / custom domain); kosong = gambar dilayani proxy `/images/` lewat API |
 
 ## 2. Frontend di Cloudflare Pages
 

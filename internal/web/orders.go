@@ -117,4 +117,3 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request, u auth.User) 
 		"flash": flashFromQuery(r),
 	})
 }
-

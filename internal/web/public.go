@@ -18,6 +18,7 @@ type productData struct {
 	Price       int    `json:"price"`
 	Type        string `json:"type"`
 	Featured    bool   `json:"featured"`
+	ImageURL    string `json:"image_url,omitempty"` // gambar pertama (kartu katalog)
 }
 
 func scanProducts(rows *sql.Rows, err error) []productData {
@@ -42,6 +43,7 @@ func scanProducts(rows *sql.Rows, err error) []productData {
 func (s *Server) landing(w http.ResponseWriter, r *http.Request) {
 	featured := scanProducts(s.DB.Query(
 		`SELECT id, slug, title, description, price, type, featured FROM products WHERE active=1 AND featured=1 ORDER BY id DESC LIMIT 6`))
+	s.attachFirstImages(r, featured)
 	s.Page(w, r, "Public/Landing", inertia.Props{
 		"featured": featured,
 		"flash":    flashFromQuery(r),
@@ -52,6 +54,7 @@ func (s *Server) landing(w http.ResponseWriter, r *http.Request) {
 func (s *Server) productsList(w http.ResponseWriter, r *http.Request) {
 	products := scanProducts(s.DB.Query(
 		`SELECT id, slug, title, description, price, type, featured FROM products WHERE active=1 ORDER BY id DESC`))
+	s.attachFirstImages(r, products)
 	s.Page(w, r, "Public/Products", inertia.Props{
 		"products": products,
 		"flash":    flashFromQuery(r),
@@ -74,6 +77,7 @@ func (s *Server) productDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	s.Page(w, r, "Public/ProductDetail", inertia.Props{
 		"product": p,
+		"images":  s.productImagesOf(r, p.ID),
 		"flash":   flashFromQuery(r),
 	})
 }

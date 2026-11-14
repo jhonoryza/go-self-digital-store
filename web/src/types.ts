@@ -31,6 +31,13 @@ export interface Product {
   price: number;
   type: string;
   featured: boolean;
+  image_url?: string; // gambar pertama (kartu katalog)
+}
+
+// gambar produk yang tersimpan di bucket R2 (maks 5 per produk)
+export interface ProductImage {
+  id: number;
+  url: string;
 }
 
 // format rupiah gaya Indonesia (cermin helper Go rupiah).

@@ -2,7 +2,7 @@ import { Infinity as InfinityIcon, MailCheck, Wallet } from "lucide-react";
 import { Link } from "@inertiajs/react";
 import type { ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
-import ProductTypeIcon from "../../components/ProductTypeIcon";
+import ProductThumb from "../../components/ProductThumb";
 import { rupiah, type Product, type SharedProps } from "../../types";
 
 interface Props extends SharedProps {
@@ -75,9 +75,7 @@ export default function Landing({ featured }: Props) {
                 href={`/produk/${p.slug}`}
                 className="group rounded-xl border border-zinc-200 bg-white p-5 transition hover:border-brand-400 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
               >
-                <div className="mb-3 flex h-28 items-center justify-center rounded-lg bg-brand-50 text-3xl dark:bg-brand-950">
-                  <ProductTypeIcon type={p.type} className="h-6 w-6" />
-                </div>
+                <ProductThumb product={p} />
                 <h3 className="font-semibold group-hover:text-brand-700 dark:group-hover:text-brand-400">{p.title}</h3>
                 <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">{p.description}</p>
                 <p className="mt-3 font-bold text-brand-700 dark:text-brand-400">{rupiah(p.price)}</p>

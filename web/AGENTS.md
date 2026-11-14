@@ -28,7 +28,12 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
 - `src/pages/Dev/LoginAs.tsx` — masuk sebagai akun mana pun (hanya bila
   prop `dev_login` aktif; route Go tidak terdaftar tanpa `STORE_DEV_LOGIN=1`).
 - `src/lib/cart.ts` — keranjang localStorage (event `cart-change`); server
-  memvalidasi ulang harga saat checkout.
+  memvalidasi ulang harga saat checkout. `CartItem.image_url` snapshot gambar.
+- `src/components/ProductThumb.tsx` — kartu gambar produk (foto pertama dari
+  R2, fallback ikon jenis); dipakai landing/katalog/keranjang.
+- `src/pages/Admin/Products.tsx` — `ImageManager` unggah/hapus gambar (maks 5,
+  jpg/png/webp, 2 MB) via multipart `images` ke `/admin/produk/{id}/images`;
+  unggah butuh produk sudah tersimpan (ada id).
 - `src/pages/{Public,Auth,Account,Admin}` — halaman; nama komponen = path
   komponen Inertia dari backend (mis. `Public/Landing`).
 - `public/_redirects` (`/* /index.html 200`) + `public/_headers` (`/assets/*`
