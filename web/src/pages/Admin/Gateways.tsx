@@ -28,7 +28,7 @@ export default function AdminGateways({ active, providers }: Props) {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Gateway Pembayaran</h1>
       <p className="text-sm text-zinc-500">
-        Aktif saat ini: <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">{active}</span>.
+        Aktif saat ini: <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">{active || "belum dipilih (simulasi)"}</span>.
         Nilai tersimpan tampil tersamar - biarkan kosong bila tidak ingin mengubah.
       </p>
       <div className="grid gap-6 lg:grid-cols-2">

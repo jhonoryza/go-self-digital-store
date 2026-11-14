@@ -102,7 +102,7 @@ export default function Pay({ order, token, simulasi }: Props) {
             simulasi && (
               <button
                 onClick={simulate}
-                className="w-full rounded-xl bg-amber-500 px-6 py-4 text-center text-lg font-semibold text-white hover:bg-amber-600"
+                className="w-full rounded-xl bg-amber-500 px-6 py-4 text-center text-lg font-semibold text-zinc-950 hover:bg-amber-400"
               >
                 Tandai lunas (mode simulasi)
               </button>
