@@ -210,6 +210,26 @@ html.dark[data-theme="neon"] .shadow-lg {
   --color-brand-950: #1d2464;
 }
 
+/* Coss UI bentuk: flat ala Cal.com - radius kecil, kartu dibedakan border
+   (bayangan nyaris dihilangkan), bukan bayangan */
+:root[data-theme="coss"] .rounded-lg {
+  border-radius: 0.375rem;
+}
+:root[data-theme="coss"] .rounded-xl,
+:root[data-theme="coss"] .rounded-2xl {
+  border-radius: 0.5rem;
+}
+:root[data-theme="coss"] .rounded-3xl {
+  border-radius: 0.625rem;
+}
+:root[data-theme="coss"] .shadow-sm {
+  box-shadow: none;
+}
+:root[data-theme="coss"] .shadow-md,
+:root[data-theme="coss"] .shadow-lg {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.07);
+}
+
 /* Align UI: biru cerah AlignUI (alignui.com, default primary blue) */
 :root[data-theme="align"] {
   --color-brand-50: #eff8ff;
@@ -223,6 +243,21 @@ html.dark[data-theme="neon"] .shadow-lg {
   --color-brand-800: #1849a9;
   --color-brand-900: #194185;
   --color-brand-950: #102a56;
+}
+
+/* Align UI bentuk: tajam modern - sudut menenetral, bayangan abu tipis rapi */
+:root[data-theme="align"] .rounded-xl {
+  border-radius: 0.875rem;
+}
+:root[data-theme="align"] .rounded-2xl {
+  border-radius: 1rem;
+}
+:root[data-theme="align"] .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgb(16 24 40 / 0.06);
+}
+:root[data-theme="align"] .shadow-md,
+:root[data-theme="align"] .shadow-lg {
+  box-shadow: 0 4px 8px -2px rgb(16 24 40 / 0.1), 0 2px 4px -2px rgb(16 24 40 / 0.06);
 }
 
 /* daisyUI: indigo vivid tema light daisyUI 5, oklch(55% 0.3 264) */
@@ -240,6 +275,17 @@ html.dark[data-theme="neon"] .shadow-lg {
   --color-brand-950: #000041;
 }
 
+/* daisyUI bentuk: kartu membulat chunky (radius-box daisyUI = 1rem) */
+:root[data-theme="daisy"] .rounded-xl {
+  border-radius: 1rem;
+}
+:root[data-theme="daisy"] .rounded-2xl {
+  border-radius: 1.25rem;
+}
+:root[data-theme="daisy"] .rounded-3xl {
+  border-radius: 1.5rem;
+}
+
 /* HeroUI: biru default HeroUI (eks NextUI), #006FEE di 500 */
 :root[data-theme="hero"] {
   --color-brand-50: #e6f1fd;
@@ -253,6 +299,28 @@ html.dark[data-theme="neon"] .shadow-lg {
   --color-brand-800: #002e62;
   --color-brand-900: #001731;
   --color-brand-950: #000b18;
+}
+
+/* HeroUI bentuk: kartu membulat + bayangan diffused lembut khas NextUI */
+:root[data-theme="hero"] .rounded-lg {
+  border-radius: 0.625rem;
+}
+:root[data-theme="hero"] .rounded-xl {
+  border-radius: 0.875rem;
+}
+:root[data-theme="hero"] .rounded-2xl {
+  border-radius: 1rem;
+}
+:root[data-theme="hero"] .rounded-3xl {
+  border-radius: 1.25rem;
+}
+:root[data-theme="hero"] .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 6px 0 rgb(0 0 0 / 0.04);
+}
+:root[data-theme="hero"] .shadow-md,
+:root[data-theme="hero"] .shadow-lg {
+  box-shadow: 0 0 5px 0 rgb(0 0 0 / 0.02), 0 2px 10px 0 rgb(0 0 0 / 0.08),
+    0 0 1px 0 rgb(0 0 0 / 0.25);
 }
 
 /* Ant Design: Daybreak Blue #1677FF di 500, 600 digelapkan (blue-7 antd)
@@ -269,4 +337,25 @@ html.dark[data-theme="neon"] .shadow-lg {
   --color-brand-800: #003a8c;
   --color-brand-900: #002766;
   --color-brand-950: #000c4b;
+}
+
+/* Ant Design bentuk: sudut rapi enterprise (radius token antd = 6px) +
+   bayangan kartu khas antd yang tipis berlapis */
+:root[data-theme="ant"] .rounded-lg {
+  border-radius: 0.375rem;
+}
+:root[data-theme="ant"] .rounded-xl,
+:root[data-theme="ant"] .rounded-2xl {
+  border-radius: 0.5rem;
+}
+:root[data-theme="ant"] .rounded-3xl {
+  border-radius: 0.625rem;
+}
+:root[data-theme="ant"] .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03), 0 1px 6px -1px rgb(0 0 0 / 0.02),
+    0 2px 4px 0 rgb(0 0 0 / 0.02);
+}
+:root[data-theme="ant"] .shadow-md,
+:root[data-theme="ant"] .shadow-lg {
+  box-shadow: 0 6px 16px -8px rgb(0 0 0 / 0.08), 0 9px 28px 0 rgb(0 0 0 / 0.05);
 }
