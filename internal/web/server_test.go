@@ -105,7 +105,7 @@ func seedUser(t *testing.T, d *sql.DB, email, pass, role string) int64 {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, err := d.Exec(`INSERT INTO users (email, name, password, role) VALUES (?,?,?,?)`, email, "Uji", hash, role)
+	r, err := d.Exec(`INSERT INTO users (email, name, password, role, email_verified_at) VALUES (?,?,?,?, datetime('now'))`, email, "Uji", hash, role)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,14 +146,27 @@ func seedKeys(t *testing.T, d *sql.DB, productID int64, n int) {
 // ---- auth ----
 
 func TestAuthRegisterLoginLogout(t *testing.T) {
-	_, ts, d := testServer(t)
+	s, ts, d := testServer(t)
 
 	client := newClient()
 
-	// register
+	// register → diarahkan ke verifikasi email
 	res := doPost(t, client, ts.URL+"/register", `{"name":"Budi","email":"budi@uji.id","password":"rahasia123"}`)
 	if res.StatusCode != http.StatusFound {
 		t.Fatalf("register = %d, mau 302", res.StatusCode)
+	}
+
+	// selesaikan verifikasi OTP lewat alur nyata
+	ov := auth.User{}
+	d.QueryRow(`SELECT id, email FROM users WHERE email='budi@uji.id'`).Scan(&ov.ID, &ov.Email)
+	code, err := s.sendEmailOTP(ov)
+	if err != nil {
+		t.Fatal(err)
+	}
+	csrf := csrfOf(t, client, ts, "/verify-email")
+	res = doPostCSRF(t, client, ts.URL+"/verify-email", fmt.Sprintf(`{"code":%q}`, code), csrf)
+	if res.StatusCode != http.StatusFound {
+		t.Fatalf("verifikasi = %d, mau 302", res.StatusCode)
 	}
 
 	// dashboard dengan sesi
@@ -243,10 +256,12 @@ func TestCheckoutAndTripayWebhook(t *testing.T) {
 	}
 	d.Exec(`UPDATE products SET file_path='berkas-uji.pdf', file_name='Berkas Uji.pdf' WHERE id=?`, fileID)
 
-	// guest checkout 2 jenis produk
-	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	res := doPost(t, client, ts.URL+"/checkout",
-		fmt.Sprintf(`{"items":[{"id":%d,"qty":1},{"id":%d,"qty":2}],"email":"pembeli@uji.id"}`, fileID, keyID))
+	// checkout 2 jenis produk (login user terverifikasi)
+	seedUser(t, d, "pembeli@uji.id", "rahasia123", "user")
+	client := loginCookie(t, ts, "pembeli@uji.id", "rahasia123")
+	csrf := csrfOf(t, client, ts, "/")
+	res := doPostCSRF(t, client, ts.URL+"/checkout",
+		fmt.Sprintf(`{"items":[{"id":%d,"qty":1},{"id":%d,"qty":2}],"email":"pembeli@uji.id"}`, fileID, keyID), csrf)
 	if res.StatusCode != http.StatusFound {
 		b, _ := io.ReadAll(res.Body)
 		t.Fatalf("checkout = %d: %s", res.StatusCode, truncate(string(b), 300))

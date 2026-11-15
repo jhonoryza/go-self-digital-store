@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	sessionTTL   = 30 * 24 * time.Hour
+	sessionTTL    = 30 * 24 * time.Hour
 	sessionCookie = "store_session"
 )
 
@@ -85,10 +85,11 @@ func sameSite(s string) http.SameSite {
 
 // User identitas login.
 type User struct {
-	ID    int64
-	Email string
-	Name  string
-	Role  string
+	ID              int64
+	Email           string
+	Name            string
+	Role            string
+	EmailVerifiedAt string // kosong = email belum diverifikasi
 }
 
 type ctxKey struct{}
@@ -116,10 +117,10 @@ func Resolve(db *sql.DB, r *http.Request) (User, string, bool) {
 	}
 	var u User
 	var csrf string
-	err := db.QueryRow(`SELECT u.id, u.email, u.name, u.role, s.csrf_token
+	err := db.QueryRow(`SELECT u.id, u.email, u.name, u.role, COALESCE(u.email_verified_at,''), s.csrf_token
 		FROM sessions s JOIN users u ON u.id = s.user_id
 		WHERE s.token=? AND s.expires_at > datetime('now')`, hashToken(raw)).
-		Scan(&u.ID, &u.Email, &u.Name, &u.Role, &csrf)
+		Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.EmailVerifiedAt, &csrf)
 	if err != nil {
 		return User{}, "", false
 	}

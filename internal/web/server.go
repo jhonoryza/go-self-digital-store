@@ -77,10 +77,6 @@ func (s *Server) routes() {
 		// isi keranjang hidup di localStorage klien — halaman cuma wadah
 		s.Page(w, r, "Public/Cart", inertia.Props{})
 	})
-	m.HandleFunc("GET /checkout", func(w http.ResponseWriter, r *http.Request) {
-		// form checkout membaca isi keranjang localStorage; submit POST /checkout
-		s.Page(w, r, "Public/Checkout", inertia.Props{})
-	})
 	m.HandleFunc("GET /privacy", func(w http.ResponseWriter, r *http.Request) {
 		s.Page(w, r, "Public/Policy", inertia.Props{"kind": "privacy", "content": getSetting(s.DB, "content.privacy")})
 	})
@@ -108,20 +104,31 @@ func (s *Server) routes() {
 		m.HandleFunc("POST /dev/login", s.devLoginAs)
 	}
 
-	// akun (Guard user)
-	m.Handle("GET /dashboard", s.guardAuth(s.dashboard))
-	m.Handle("GET /profil", s.guardAuth(s.profilePage))
-	m.Handle("POST /profil", s.guardAuth(s.updateProfile))
-	m.Handle("POST /profil/password", s.guardAuth(s.changePassword))
-	m.Handle("GET /pesanan", s.guardAuth(s.ordersPage))
-	m.Handle("GET /pesanan/{order_no}", s.guardAuth(s.orderDetailPage))
-	m.Handle("GET /tiket", s.guardAuth(s.ticketsPage))
-	m.Handle("POST /tiket", s.guardAuth(s.createTicket))
-	m.Handle("GET /tiket/{id}", s.guardAuth(s.ticketDetailPage))
-	m.Handle("POST /tiket/{id}", s.guardAuth(s.replyTicket))
+	// verifikasi email (login sudah, belum wajib verified)
+	m.Handle("GET /verify-email", s.guardAuth(s.verifyEmailPage))
+	m.Handle("POST /verify-email", s.guardAuth(s.verifyEmailVerify))
+	m.Handle("POST /verify-email/resend", s.guardAuth(s.verifyEmailResend))
 
-	// checkout & pembayaran
-	m.Handle("POST /checkout", s.limited("checkout", http.HandlerFunc(s.checkout)))
+	// akun (Guard user + wajib email terverifikasi)
+	m.Handle("GET /dashboard", s.guardVerified(s.dashboard))
+	m.Handle("GET /profil", s.guardVerified(s.profilePage))
+	m.Handle("POST /profil", s.guardVerified(s.updateProfile))
+	m.Handle("POST /profil/password", s.guardVerified(s.changePassword))
+	m.Handle("GET /pesanan", s.guardVerified(s.ordersPage))
+	m.Handle("GET /pesanan/{order_no}", s.guardVerified(s.orderDetailPage))
+	m.Handle("GET /tiket", s.guardVerified(s.ticketsPage))
+	m.Handle("POST /tiket", s.guardVerified(s.createTicket))
+	m.Handle("GET /tiket/{id}", s.guardVerified(s.ticketDetailPage))
+	m.Handle("POST /tiket/{id}", s.guardVerified(s.replyTicket))
+
+	// checkout & pembayaran (wajib login terverifikasi - produk dikirim ke
+	// email yang terbukti dimiliki pembeli)
+	m.Handle("POST /checkout", s.limited("checkout", s.guardVerified(func(w http.ResponseWriter, r *http.Request, _ auth.User) {
+		s.checkout(w, r)
+	})))
+	m.Handle("GET /checkout", s.limited("checkout", s.guardVerified(func(w http.ResponseWriter, r *http.Request, _ auth.User) {
+		s.Page(w, r, "Public/Checkout", inertia.Props{})
+	})))
 	m.HandleFunc("GET /pay/{order_no}", s.payPage)
 	m.Handle("POST /pay/{order_no}", s.limited("checkout", http.HandlerFunc(s.payNow)))
 	m.Handle("POST /callback/payment", s.limited("callback", http.HandlerFunc(s.paymentCallback)))

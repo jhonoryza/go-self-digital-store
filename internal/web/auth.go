@@ -126,7 +126,12 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, http.StatusInternalServerError, "gagal membuat sesi")
 		return
 	}
-	s.Redirect(w, r, "/dashboard")
+	// verifikasi email: OTP dikirim ke email pendaftar
+	u := auth.User{ID: uid, Email: email, Name: name}
+	if _, err := s.sendEmailOTP(u); err != nil {
+		logErr("kirim OTP pendaftaran %s: %v", email, err)
+	}
+	s.flashOK(w, r, "/verify-email", "Akun dibuat - kode OTP dikirim ke "+email+".")
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
@@ -169,9 +174,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// admin → konsol admin; user → dashboard
-	var role string
-	s.DB.QueryRow(`SELECT role FROM users WHERE id=?`, u.ID).Scan(&role)
+	// admin → konsol admin; user → dashboard; belum verified → verifikasi dulu
+	var role, verifiedAt string
+	s.DB.QueryRow(`SELECT role, COALESCE(email_verified_at,'') FROM users WHERE id=?`, u.ID).Scan(&role, &verifiedAt)
+	if verifiedAt == "" {
+		s.Redirect(w, r, "/verify-email")
+		return
+	}
 	if role == "admin" {
 		s.Redirect(w, r, "/admin")
 		return

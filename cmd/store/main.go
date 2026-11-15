@@ -105,7 +105,7 @@ func seed(cfg config.Config) {
 	}
 	hash, err := auth.HashPassword(pass)
 	must(err)
-	r, err := d.Exec(`INSERT INTO users (email, name, password, role) VALUES (?,?,?, 'admin')`, email, "Admin", hash)
+	r, err := d.Exec(`INSERT INTO users (email, name, password, role, email_verified_at) VALUES (?,?,?, 'admin', datetime('now'))`, email, "Admin", hash)
 	must(err)
 	id, _ := r.LastInsertId()
 	fmt.Printf("admin dibuat: %s / %s (id %d) - GANTI password segera\n", email, pass, id)

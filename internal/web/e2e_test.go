@@ -21,6 +21,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jhonoryza/go-self-digital-store/internal/auth"
 )
 
 // ---- helper tambahan khusus E2E ----
@@ -182,14 +184,43 @@ func parsePayLoc(t *testing.T, loc string) (orderNo, token string) {
 }
 
 // checkoutOrder POST /checkout sukses; kembalikan order_no + token.
+// Checkout kini wajib login terverifikasi → CSRF diambil dari halaman beranda.
 func checkoutOrder(t *testing.T, client *http.Client, ts *httptest.Server, body string) (string, string) {
 	t.Helper()
-	res := doPost(t, client, ts.URL+"/checkout", body)
+	csrf := csrfOf(t, client, ts, "/")
+	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/checkout", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Inertia", "true")
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
+	req.Header.Set("Origin", ts.URL)
+	req.Header.Set("X-CSRF-Token", csrf)
+	res, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { res.Body.Close() })
 	if res.StatusCode != http.StatusFound {
 		b, _ := io.ReadAll(res.Body)
 		t.Fatalf("checkout = %d: %s", res.StatusCode, truncate(string(b), 300))
 	}
 	return parsePayLoc(t, res.Header.Get("Location"))
+}
+
+// verifyUser selesaikan verifikasi email user uji lewat alur OTP nyata
+// (kode dari s.sendEmailOTP, POST ke /verify-email).
+func verifyUser(t *testing.T, s *Server, d *sql.DB, client *http.Client, ts *httptest.Server, email string) {
+	t.Helper()
+	u := auth.User{}
+	d.QueryRow(`SELECT id, email FROM users WHERE email=?`, email).Scan(&u.ID, &u.Email)
+	code, err := s.sendEmailOTP(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	csrf := csrfOf(t, client, ts, "/verify-email")
+	res := doPostCSRF(t, client, ts.URL+"/verify-email", fmt.Sprintf(`{"code":%q}`, code), csrf)
+	if res.StatusCode != http.StatusFound {
+		t.Fatalf("verify %s = %d", email, res.StatusCode)
+	}
 }
 
 // paySimulasi POST /pay/{no} mode simulasi (tandai lunas).
@@ -288,12 +319,6 @@ func TestE2EPublicPages(t *testing.T) {
 		t.Errorf("/keranjang = component %v, mau Public/Cart", page["component"])
 	}
 
-	// halaman checkout (form submit ke POST /checkout)
-	page = doPage(t, newClient(), ts.URL+"/checkout")
-	if page["component"] != "Public/Checkout" {
-		t.Errorf("/checkout = component %v, mau Public/Checkout", page["component"])
-	}
-
 	// flash query ?ok= / ?err= masuk props
 	page = doPage(t, newClient(), ts.URL+"/produk?ok=halo&err=waduh")
 	flash := prop(t, page)["flash"].(map[string]any)
@@ -339,11 +364,11 @@ func TestE2EAuthValidationAndSession(t *testing.T) {
 		}
 	}
 
-	// register sukses → sesi + dashboard
+	// register sukses → sesi + diarahkan ke verifikasi email
 	client := newClient()
 	res = regPost(client, `{"name":"Cici","email":"cici@uji.id","password":"rahasia123"}`, "10.9.9.2")
-	if res.StatusCode != http.StatusFound {
-		t.Fatalf("register = %d, mau 302", res.StatusCode)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "/verify-email") {
+		t.Fatalf("register = %d %s, mau redirect /verify-email", res.StatusCode, res.Header.Get("Location"))
 	}
 	// duplikat email ditolak
 	res = regPost(&http.Client{}, `{"name":"Lagi","email":"cici@uji.id","password":"rahasia123"}`, "10.9.9.3")
@@ -363,6 +388,8 @@ func TestE2EAuthValidationAndSession(t *testing.T) {
 		t.Errorf("login page saat login = %d %s", res.StatusCode, res.Header.Get("Location"))
 	}
 
+	// verifikasi dulu (dashboard kini butuh email terverifikasi)
+	verifyUser(t, s, d, client, ts, "cici@uji.id")
 	// logout (perlu CSRF) → sesi dihapus
 	csrf := csrfOf(t, client, ts, "/dashboard")
 	res = doPostCSRF(t, client, ts.URL+"/logout", `{}`, csrf)
@@ -484,16 +511,15 @@ func TestE2EDashboardOrdersInvoice(t *testing.T) {
 	}
 	d.Exec(`UPDATE products SET file_path='berkas-lengkap.pdf', file_name='Berkas Lengkap.pdf' WHERE id=?`, fileID)
 
-	// guest checkout dulu (order terikat email saja)
-	guest := newClient()
-	ordGuest, tokGuest := checkoutOrder(t, guest, ts,
-		fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"pembeli-lengkap@uji.id"}`, fileID))
-
-	// register dengan email sama → order guest ikut muncul di akun
+	// register + verifikasi email (checkout kini wajib login terverifikasi)
 	client := newClient()
 	doPost(t, client, ts.URL+"/register", `{"name":"Pembeli","email":"pembeli-lengkap@uji.id","password":"rahasia123"}`)
+	verifyUser(t, s, d, client, ts, "pembeli-lengkap@uji.id")
 
-	// checkout saat login → order terikat user_id
+	// dua checkout sebagai user terverifikasi
+	ordGuest, tokGuest := checkoutOrder(t, client, ts,
+		fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"pembeli-lengkap@uji.id"}`, fileID))
+
 	ordUser, _ := checkoutOrder(t, client, ts,
 		fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"pembeli-lengkap@uji.id"}`, fileID))
 	var uid sql.NullInt64
@@ -519,9 +545,10 @@ func TestE2EDashboardOrdersInvoice(t *testing.T) {
 		t.Errorf("item invoice = %v", o["items"])
 	}
 
-	// order milik orang lain → 404
+	// order milik orang lain → 404 (user lain harus verified dulu juga)
 	doPost(t, newClient(), ts.URL+"/register", `{"name":"Lain","email":"orang-lain@uji.id","password":"rahasia123"}`)
 	other := loginCookie(t, ts, "orang-lain@uji.id", "rahasia123")
+	verifyUser(t, s, d, other, ts, "orang-lain@uji.id")
 	res := doGetRes(t, other, ts.URL+"/pesanan/"+ordGuest, map[string]string{"X-Inertia": "true"})
 	if res.StatusCode != http.StatusNotFound {
 		t.Errorf("invoice orang lain = %d, mau 404", res.StatusCode)
@@ -559,17 +586,19 @@ func TestE2ECheckoutValidation(t *testing.T) {
 	deadID := seedProduct(t, d, "produk-mati", 50000, "file")
 	d.Exec(`UPDATE products SET active=0 WHERE id=?`, deadID)
 
-	guest := newClient()
+	seedUser(t, d, "validator@uji.id", "rahasia123", "user")
+	guest := loginCookie(t, ts, "validator@uji.id", "rahasia123")
+	vcsrf := csrfOf(t, guest, ts, "/")
 
 	// keranjang kosong → redirect /keranjang dengan flash err
-	res := doPost(t, guest, ts.URL+"/checkout", `{}`)
+	res := doPostCSRF(t, guest, ts.URL+"/checkout", `{}`, vcsrf)
 	if res.StatusCode != http.StatusFound || !strings.HasPrefix(res.Header.Get("Location"), "/keranjang?") ||
 		!strings.Contains(res.Header.Get("Location"), "err=") {
 		t.Errorf("keranjang kosong = %d %s", res.StatusCode, res.Header.Get("Location"))
 	}
 
 	// email tidak valid → render ulang dengan errors
-	res = doPost(t, guest, ts.URL+"/checkout", fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"ngawur"}`, pid))
+	res = doPostCSRF(t, guest, ts.URL+"/checkout", fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"ngawur"}`, pid), vcsrf)
 	if res.StatusCode != http.StatusOK {
 		t.Fatalf("email salah = %d", res.StatusCode)
 	}
@@ -579,16 +608,16 @@ func TestE2ECheckoutValidation(t *testing.T) {
 
 	// qty di luar 1..10 ditolak
 	for _, qty := range []int{0, 11} {
-		res = doPost(t, guest, ts.URL+"/checkout",
-			fmt.Sprintf(`{"items":[{"id":%d,"qty":%d}],"email":"p@uji.id"}`, pid, qty))
+		res = doPostCSRF(t, guest, ts.URL+"/checkout",
+			fmt.Sprintf(`{"items":[{"id":%d,"qty":%d}],"email":"p@uji.id"}`, pid, qty), vcsrf)
 		if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "err=") {
 			t.Errorf("qty %d = %d %s", qty, res.StatusCode, res.Header.Get("Location"))
 		}
 	}
 
 	// produk nonaktif ditolak
-	res = doPost(t, guest, ts.URL+"/checkout",
-		fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"p@uji.id"}`, deadID))
+	res = doPostCSRF(t, guest, ts.URL+"/checkout",
+		fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"p@uji.id"}`, deadID), vcsrf)
 	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "err=") {
 		t.Errorf("produk mati = %d %s", res.StatusCode, res.Header.Get("Location"))
 	}
@@ -622,7 +651,8 @@ func TestE2ESimulatedPayment(t *testing.T) {
 	seedKeys(t, d, keyID, 3)
 	noKeyID := seedProduct(t, d, "kunci-habis", 25000, "key") // tanpa stok
 
-	client := newClient()
+	seedUser(t, d, "sim@uji.id", "rahasia123", "user")
+	client := loginCookie(t, ts, "sim@uji.id", "rahasia123")
 	orderNo, token := checkoutOrder(t, client, ts,
 		fmt.Sprintf(`{"items":[{"id":%d,"qty":2}],"email":"sim@uji.id"}`, keyID))
 
@@ -724,7 +754,9 @@ func TestE2ESimulatedPayment(t *testing.T) {
 func TestE2ETripayWebhookNegatives(t *testing.T) {
 	s, ts, d := testServer(t)
 	fileID := seedProduct(t, d, "berkas-webhook", 200000, "file")
-	orderNo, _ := checkoutOrder(t, newClient(), ts,
+	seedUser(t, d, "hook@uji.id", "rahasia123", "user")
+	hookClient := loginCookie(t, ts, "hook@uji.id", "rahasia123")
+	orderNo, _ := checkoutOrder(t, hookClient, ts,
 		fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"hook@uji.id"}`, fileID))
 
 	setSetting(s.DB, "payment_provider", "tripay")
@@ -813,7 +845,8 @@ func TestE2EDownloadGuards(t *testing.T) {
 	}
 	d.Exec(`UPDATE products SET file_path='berkas-dl.zip', file_name='Berkas DL.zip' WHERE id=?`, fileID)
 
-	client := newClient()
+	seedUser(t, d, "dl@uji.id", "rahasia123", "user")
+	client := loginCookie(t, ts, "dl@uji.id", "rahasia123")
 	orderNo, token := checkoutOrder(t, client, ts,
 		fmt.Sprintf(`{"items":[{"id":%d,"qty":1},{"id":%d,"qty":1}],"email":"dl@uji.id"}`, fileID, keyID))
 
@@ -1116,8 +1149,10 @@ func TestE2EAdminConsole(t *testing.T) {
 	if res.StatusCode != http.StatusNotFound {
 		t.Errorf("detail nonaktif = %d, mau 404", res.StatusCode)
 	}
-	res = doPost(t, newClient(), ts.URL+"/checkout",
-		fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"p@uji.id"}`, keyProdID))
+	seedUser(t, d, "cart@uji.id", "rahasia123", "user")
+	cartClient := loginCookie(t, ts, "cart@uji.id", "rahasia123")
+	res = doPostCSRF(t, cartClient, ts.URL+"/checkout",
+		fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"cart@uji.id"}`, keyProdID), csrfOf(t, cartClient, ts, "/"))
 	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "err=") {
 		t.Errorf("checkout nonaktif = %d %s", res.StatusCode, res.Header.Get("Location"))
 	}
@@ -1357,12 +1392,13 @@ func TestE2ERupiahFormat(t *testing.T) {
 // ---- alur lintas fitur: beli → tiket → invoice (satu sesi user) ----
 
 func TestE2EBuyThenTicketThenInvoice(t *testing.T) {
-	_, ts, d := testServer(t)
+	s, ts, d := testServer(t)
 	keyID := seedProduct(t, d, "kunci-lintas", 75000, "key")
 	seedKeys(t, d, keyID, 1)
 
 	client := newClient()
 	doPost(t, client, ts.URL+"/register", `{"name":"Rina","email":"rina@uji.id","password":"rahasia123"}`)
+	verifyUser(t, s, d, client, ts, "rina@uji.id")
 	orderNo, token := checkoutOrder(t, client, ts,
 		fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"rina@uji.id"}`, keyID))
 
@@ -1415,6 +1451,7 @@ func TestE2EMultipleDownloadLinks(t *testing.T) {
 	// user checkout 3 produk file sekaligus (2 berkas + 1 kosong) dalam SATU order
 	client := newClient()
 	doPost(t, client, ts.URL+"/register", `{"name":"Multi","email":"multi@uji.id","password":"rahasia123"}`)
+	verifyUser(t, s, d, client, ts, "multi@uji.id")
 	orderNo, token := checkoutOrder(t, client, ts,
 		fmt.Sprintf(`{"items":[{"id":%d,"qty":1},{"id":%d,"qty":1},{"id":%d,"qty":1}],"email":"multi@uji.id"}`, f1, f2, fEmpty))
 	if res := paySimulasi(t, client, ts, orderNo, token); res.StatusCode != http.StatusFound {
@@ -1528,5 +1565,79 @@ func TestE2EAdminSettingsAndDetail(t *testing.T) {
 	// user lain tak bisa akses halaman admin
 	if res := doGetRes(t, user, ts.URL+"/admin/orders/"+orderNo, map[string]string{"X-Inertia": "true"}); res.StatusCode != http.StatusForbidden {
 		t.Errorf("detail order utk user biasa = %d, mau 403", res.StatusCode)
+	}
+}
+
+// ---- verifikasi email: OTP saat daftar, gerbang dashboard & checkout ----
+
+func TestE2EEmailVerification(t *testing.T) {
+	s, ts, d := testServer(t)
+
+	// daftar → redirect ke /verify-email, user belum verified
+	client := newClient()
+	res := doPost(t, client, ts.URL+"/register", `{"name":"Ovi","email":"ovi@uji.id","password":"rahasia123"}`)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "/verify-email") {
+		t.Fatalf("register = %d %s, mau redirect /verify-email", res.StatusCode, res.Header.Get("Location"))
+	}
+	var verified sql.NullString
+	d.QueryRow(`SELECT email_verified_at FROM users WHERE email='ovi@uji.id'`).Scan(&verified)
+	if verified.Valid {
+		t.Fatal("user baru harus belum verified")
+	}
+
+	// dashboard terkunci: XHR 409 + location /verify-email, plain 302
+	res = doGetRes(t, client, ts.URL+"/dashboard", map[string]string{"X-Inertia": "true"})
+	if res.StatusCode != http.StatusConflict || res.Header.Get("X-Inertia-Location") != "/verify-email" {
+		t.Errorf("dashboard belum verified = %d %s", res.StatusCode, res.Header.Get("X-Inertia-Location"))
+	}
+	res = doGetRes(t, client, ts.URL+"/dashboard", nil)
+	if res.StatusCode != http.StatusFound || res.Header.Get("Location") != "/verify-email" {
+		t.Errorf("dashboard plain = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	// checkout wajib login (guest) → login page
+	res = doGetRes(t, newClient(), ts.URL+"/checkout", nil)
+	if res.StatusCode != http.StatusFound || res.Header.Get("Location") != "/login" {
+		t.Errorf("checkout guest = %d %s, mau ke /login", res.StatusCode, res.Header.Get("Location"))
+	}
+
+	// kirim ulang OTP (test ambil kode plaintext via helper resend)
+	u := auth.User{ID: 0}
+	d.QueryRow(`SELECT id, email FROM users WHERE email='ovi@uji.id'`).Scan(&u.ID, &u.Email)
+	u.Email = "ovi@uji.id"
+	code, err := s.sendEmailOTP(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// cooldown: resend kedua langsung ditolak
+	res = doPostCSRF(t, client, ts.URL+"/verify-email/resend", `{}`, csrfOf(t, client, ts, "/verify-email"))
+	if loc := res.Header.Get("Location"); !strings.Contains(loc, "err=") {
+		t.Errorf("resend kedua = %s, mau flash err (cooldown)", loc)
+	}
+
+	// kode salah → errors pada respons POST (000000 pasti bukan OTP aktif)
+	csrf := csrfOf(t, client, ts, "/verify-email")
+	res = doPostCSRF(t, client, ts.URL+"/verify-email", `{"code":"000000"}`, csrf)
+	if res.StatusCode != http.StatusOK || !errHas(postErrors(t, res), "code") {
+		t.Errorf("kode salah = %d, mau 200 dengan errors.code", res.StatusCode)
+	}
+
+	// kode benar → verified → dashboard terbuka
+	res = doPostCSRF(t, client, ts.URL+"/verify-email", fmt.Sprintf(`{"code":%q}`, code), csrf)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "/dashboard") {
+		t.Fatalf("verify = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	d.QueryRow(`SELECT email_verified_at FROM users WHERE email='ovi@uji.id'`).Scan(&verified)
+	if !verified.Valid {
+		t.Fatal("email_verified_at tidak terisi")
+	}
+	dash := doPage(t, client, ts.URL+"/dashboard")
+	if _, ok := prop(t, dash)["stats"]; !ok {
+		t.Error("dashboard tetap terkunci setelah verifikasi")
+	}
+	// otp terhapus
+	var otps int
+	d.QueryRow(`SELECT COUNT(*) FROM email_otps WHERE user_id=?`, u.ID).Scan(&otps)
+	if otps != 0 {
+		t.Errorf("otp tersisa = %d, mau 0", otps)
 	}
 }

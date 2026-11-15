@@ -3,7 +3,7 @@ import AdminLayout from "../../components/AdminLayout";
 import type { SharedProps } from "../../types";
 
 interface Props extends SharedProps {
-  users: { id: number; email: string; name: string; role: string; created_at: string }[];
+  users: { id: number; email: string; name: string; role: string; verified: boolean; created_at: string }[];
 }
 
 export default function AdminUsers({ users }: Props) {
@@ -17,6 +17,7 @@ export default function AdminUsers({ users }: Props) {
               <th className="px-4 py-2.5 font-medium">Email</th>
               <th className="px-4 py-2.5 font-medium">Nama</th>
               <th className="px-4 py-2.5 font-medium">Role</th>
+              <th className="px-4 py-2.5 font-medium">Email</th>
               <th className="px-4 py-2.5 font-medium">Terdaftar</th>
             </tr>
           </thead>

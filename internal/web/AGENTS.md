@@ -31,6 +31,7 @@ request asing ditolak sebelum di-buffer.
 | `dev.go` | dev login-as (`/dev/login`, hanya bila `STORE_DEV_LOGIN=1`; route tidak terdaftar bila mati) |
 | `images.go` | gambar produk: upload/hapus ke R2 (minio-go, prefix per-app di bucket `webapp`), proxy `GET /images/{key...}` hanya untuk prefix app; `imageStore` interface (stub di test) |
 | `settings.go` | setting runtime admin: SMTP (Mailer.Reconfigure + TestSend), brand nama/logo (R2), konten kebijakan, SEO; tersimpan di tabel settings; `s.appName()` = brand.name menimpa config env |
+| `verify.go` | verifikasi email: OTP 6 digit (sha256 di `email_otps`, TTL 15 menit, resend cooldown 60s), `guardVerified` membungkus dashboard menus + checkout (wajib login terverifikasi) |
 
 ## Local Contracts
 
@@ -78,7 +79,7 @@ request asing ditolak sebelum di-buffer.
 - `go test ./internal/web/ -race` — dua kelompok:
   - **server_test.go** (6 suite): auth/lockout/reset, checkout→webhook tripay
     ber-signature→delivery→unduhan, tiket, admin guard.
-  - **e2e_test.go** (14 suite): halaman publik, auth validasi+guard sesi+logout,
+  - **e2e_test.go** (15 suite): halaman publik, auth validasi+guard sesi+logout,
     profil+ganti password (sesi lain putus), dashboard/pesanan/invoice,
     validasi checkout+kupon, pembayaran simulasi (payNow/stok habis/idempoten),
     webhook tripay negatif (EXPIRED/nominal beda/order tak dikenal/fail-closed),

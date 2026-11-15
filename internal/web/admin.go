@@ -72,7 +72,7 @@ func (s *Server) adminDashboard(w http.ResponseWriter, r *http.Request, u auth.U
 
 // adminUsers GET /admin/users — daftar akun.
 func (s *Server) adminUsers(w http.ResponseWriter, r *http.Request, u auth.User) {
-	rows, err := s.DB.Query(`SELECT id, email, name, role, created_at FROM users ORDER BY id DESC LIMIT 200`)
+	rows, err := s.DB.Query(`SELECT id, email, name, role, COALESCE(email_verified_at,''), created_at FROM users ORDER BY id DESC LIMIT 200`)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, "kesalahan server")
 		return
@@ -81,9 +81,9 @@ func (s *Server) adminUsers(w http.ResponseWriter, r *http.Request, u auth.User)
 	var users []map[string]any
 	for rows.Next() {
 		var id int64
-		var email, name, role, created string
-		if rows.Scan(&id, &email, &name, &role, &created) == nil {
-			users = append(users, map[string]any{"id": id, "email": email, "name": name, "role": role, "created_at": created})
+		var email, name, role, verified, created string
+		if rows.Scan(&id, &email, &name, &role, &verified, &created) == nil {
+			users = append(users, map[string]any{"id": id, "email": email, "name": name, "role": role, "verified": verified != "", "created_at": created})
 		}
 	}
 	s.Page(w, r, "Admin/Users", inertia.Props{"users": users, "flash": flashFromQuery(r)})
