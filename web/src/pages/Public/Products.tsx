@@ -1,13 +1,13 @@
-import { Head, Link } from "@inertiajs/react";
-import { ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Head, Link, router } from "@inertiajs/react";
+import { ChevronDown, Loader2, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
 import ProductThumb from "../../components/ProductThumb";
 import { rupiah, type CatalogFilters, type Product, type SharedProps } from "../../types";
 
 interface Props extends SharedProps {
   products: Product[];
-  page: number;
+  page: number; // halaman yang baru dikirim server (1 = muat awal)
   last_page: number;
   total: number;
   categories: string[]; // kategori unik utk dropdown filter
@@ -23,19 +23,7 @@ const SORT_LABELS: Record<string, string> = {
   terlama: "Terlama",
 };
 
-// Nomor halaman di sekitar halaman aktif (maks 5) dengan halaman 1 dan terakhir selalu tampil.
-function pageItems(current: number, last: number): (number | "…")[] {
-  const around = [current - 1, current, current + 1].filter((n) => n >= 2 && n <= last - 1);
-  const uniq = [...new Set(around)].sort((a, b) => a - b);
-  const out: (number | "…")[] = [1];
-  if (uniq.length && uniq[0] > 2) out.push("…");
-  out.push(...uniq);
-  if (uniq.length && uniq[uniq.length - 1] < last - 1) out.push("…");
-  if (last > 1) out.push(last);
-  return out;
-}
-
-// katalogURL rakit /produk dengan filter aktif + halaman (paginasi mempertahankan filter).
+// katalogURL rakit /produk dengan filter aktif + halaman (untuk link SEO rel=next).
 function katalogURL(f: CatalogFilters, page: number): string {
   const p = new URLSearchParams();
   if (f.q) p.set("q", f.q);
@@ -60,22 +48,68 @@ export default function Products({
   seo,
 }: Props) {
   // props nil (katalog kosong / tanpa kategori-tag) dihilangkan gonertia
-  const products = rawProducts ?? [];
+  const productsProp = rawProducts ?? [];
   const categories = rawCategories ?? [];
   const tags = rawTags ?? [];
-  const from = total === 0 ? 0 : (page - 1) * products.length + 1;
-  const to = (page - 1) * products.length + products.length;
   const adaFilter = Boolean(filters.q || filters.kategori || filters.tag || filters.harga_min || filters.harga_max);
   const filterCount = [filters.q, filters.kategori, filters.tag, filters.harga_min, filters.harga_max].filter(Boolean).length;
   // panel tersembunyi secara default; terbuka otomatis saat ada filter aktif
   const [filterOpen, setFilterOpen] = useState(adaFilter);
 
+  // ---- infinite scroll ----
+  // Kartu terakumulasi di state klien; tiap sentinel terlihat, halaman
+  // berikutnya dimuat via partial reload (only) lalu di-append. Full
+  // navigation (ganti filter/sort/URL ?page=N) mengganti isi state.
+  const sig = JSON.stringify(filters);
+  const [loaded, setLoaded] = useState({ sig, page, items: productsProp });
+  const [busy, setBusy] = useState(false);
+  const loadingRef = useRef(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setLoaded((prev) => {
+      if (prev.sig !== sig) return { sig, page, items: productsProp }; // filter/sort berganti
+      if (page === prev.page + 1) return { ...prev, page, items: [...prev.items, ...productsProp] }; // hasil scroll
+      if (page !== prev.page) return { sig, page, items: productsProp }; // lompatan (back/forward/tautan ?page=N)
+      return prev;
+    });
+  }, [sig, page, productsProp]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting) || loadingRef.current) return;
+        if (loaded.page >= last_page) return;
+        loadingRef.current = true;
+        setBusy(true);
+        router.reload({
+          only: ["products", "page", "last_page", "total"],
+          data: { page: loaded.page + 1 },
+          onFinish: () => {
+            loadingRef.current = false;
+            setBusy(false);
+          },
+        });
+      },
+      { rootMargin: "600px 0px" }, // mulai memuat sebelum benar-benar mentok bawah
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loaded.page, last_page]);
+
+  const items = loaded.items;
+  const semuaTampil = total > 0 && items.length >= total;
+  const from = total === 0 ? 0 : 1;
 
   return (
     <>
       <Head>
         <title>{seo?.["seo.products.title"] || "Produk"}</title>
         {seo?.["seo.products.description"] && <meta name="description" content={seo["seo.products.description"]} />}
+        {/* crawlable untuk mesin pencari walau UI memakai infinite scroll */}
+        {page < last_page && <link rel="next" href={katalogURL(filters, page + 1)} />}
       </Head>
       <section className="mx-auto max-w-6xl px-4 py-12">
         <h1 className="mb-2 text-3xl font-bold">Semua Produk</h1>
@@ -232,7 +266,7 @@ export default function Products({
         </form>
         )}
 
-        {products.length === 0 ? (
+        {items.length === 0 ? (
           <p className="rounded-xl border border-dashed border-zinc-300 p-12 text-center text-zinc-500 dark:border-zinc-700">
             {adaFilter
               ? "Tidak ada produk yang cocok dengan pencarian atau filter."
@@ -240,8 +274,11 @@ export default function Products({
           </p>
         ) : (
           <>
+            <p className="mb-4 text-sm text-zinc-500" aria-live="polite">
+              Menampilkan {from} sampai {items.length} dari {total} produk
+            </p>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {products.map((p) => (
+              {items.map((p) => (
                 <Link
                   key={p.id}
                   href={`/produk/${p.slug}`}
@@ -267,70 +304,18 @@ export default function Products({
               ))}
             </div>
 
-            {last_page > 1 && (
-              <nav aria-label="Navigasi halaman" className="mt-10 flex flex-col items-center gap-3">
-                <p className="text-sm text-zinc-500">
-                  Menampilkan {from} sampai {to} dari {total} produk
+            {/* sentinel infinite scroll */}
+            <div ref={sentinelRef} aria-hidden="true" className="h-1" />
+            <div className="mt-8 flex justify-center">
+              {busy ? (
+                <p className="flex items-center gap-2 text-sm text-zinc-500">
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  Memuat produk lain…
                 </p>
-                <div className="flex items-center gap-1">
-                  {page > 1 ? (
-                    <Link
-                      href={katalogURL(filters, page - 1)}
-                      aria-label="Halaman sebelumnya"
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 hover:border-brand-400 hover:text-brand-600 dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-brand-400"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Link>
-                  ) : (
-                    <span
-                      aria-disabled="true"
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-100 text-zinc-300 dark:border-zinc-900 dark:text-zinc-700"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </span>
-                  )}
-                  {pageItems(page, last_page).map((n, i) =>
-                    n === "…" ? (
-                      <span key={`gap-${i}`} className="px-1.5 text-zinc-400">
-                        …
-                      </span>
-                    ) : n === page ? (
-                      <span
-                        key={n}
-                        aria-current="page"
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-semibold text-white"
-                      >
-                        {n}
-                      </span>
-                    ) : (
-                      <Link
-                        key={n}
-                        href={katalogURL(filters, n)}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-sm text-zinc-600 hover:border-brand-400 hover:text-brand-600 dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-brand-400"
-                      >
-                        {n}
-                      </Link>
-                    ),
-                  )}
-                  {page < last_page ? (
-                    <Link
-                      href={katalogURL(filters, page + 1)}
-                      aria-label="Halaman berikutnya"
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 hover:border-brand-400 hover:text-brand-600 dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-brand-400"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  ) : (
-                    <span
-                      aria-disabled="true"
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-100 text-zinc-300 dark:border-zinc-900 dark:text-zinc-700"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </span>
-                  )}
-                </div>
-              </nav>
-            )}
+              ) : semuaTampil && total > 12 ? (
+                <p className="text-sm text-zinc-400">Semua {total} produk sudah tampil</p>
+              ) : null}
+            </div>
           </>
         )}
       </section>
