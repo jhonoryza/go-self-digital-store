@@ -35,6 +35,8 @@ const rootTemplate = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title inertia>{{ .appName }}</title>
 <link rel="manifest" href="/manifest.webmanifest"/>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png"/>
+<link rel="icon" type="image/png" sizes="96x96" href="/icons/icon-96.png"/>
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"/>
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="{{ .themeColor }}"/>
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#09090b"/>

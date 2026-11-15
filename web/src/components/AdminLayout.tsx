@@ -56,7 +56,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-3">
             <span className="hidden rounded-md bg-zinc-900 px-2 py-1 text-xs font-bold text-white sm:inline-block dark:bg-white dark:text-zinc-900">ADMIN</span>
             <Link href="/" className="flex items-center gap-2 font-bold">
-              {brand_logo && <img src={brand_logo} alt="" className="h-6 w-6 object-contain" />}
+              <img src={brand_logo || "/icons/icon-96.png"} alt="" className="h-6 w-6 rounded-md object-contain" />
               {app_name ?? "Toko Digital"}
             </Link>
           </div>

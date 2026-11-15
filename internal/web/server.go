@@ -193,6 +193,7 @@ func (s *Server) routes() {
 	// offline fallback, dan ikon
 	m.HandleFunc("GET /manifest.webmanifest", s.manifestWebmanifest)
 	m.HandleFunc("GET /sw.js", s.serveDistFile("sw.js", "text/javascript; charset=utf-8"))
+	m.HandleFunc("GET /favicon.ico", s.serveDistFile("favicon.ico", "image/x-icon"))
 	m.HandleFunc("GET /offline.html", s.serveDistFile("offline.html", "text/html; charset=utf-8"))
 	m.HandleFunc("GET /icons/{name}", s.serveIcons)
 
@@ -363,6 +364,7 @@ func (s *Server) manifestWebmanifest(w http.ResponseWriter, r *http.Request) {
 		"background_color": "#09090b",
 		"theme_color":      themeColor,
 		"icons": []map[string]any{
+			{"src": "/icons/icon-96.png", "sizes": "96x96", "type": "image/png"},
 			{"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
 			{"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
 			{"src": "/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},

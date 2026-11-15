@@ -29,7 +29,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur print:hidden dark:border-zinc-800 dark:bg-zinc-950/90">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-            {brand_logo && <img src={brand_logo} alt="" className="h-7 w-7 object-contain" />}
+            <img src={brand_logo || "/icons/icon-96.png"} alt="" className="h-7 w-7 rounded-md object-contain" />
             {app_name ?? "Toko Digital"}
           </Link>
           <div className="flex items-center gap-1 text-sm sm:gap-3">
