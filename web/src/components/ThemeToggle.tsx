@@ -22,7 +22,7 @@ export default function ThemeToggle() {
         } catch {}
         window.dispatchEvent(new Event("theme-change"));
       }}
-      className="rounded-md p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
+      className="rounded-md p-2.5 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
       aria-label={dark ? "Ganti ke mode terang" : "Ganti ke mode gelap"}
       title={dark ? "Mode terang" : "Mode gelap"}
     >

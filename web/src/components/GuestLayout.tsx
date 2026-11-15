@@ -25,7 +25,7 @@ function useCartCount() {
 function CartBadge() {
   const count = useCartCount();
   return (
-    <Link href="/keranjang" className="relative rounded-md p-2 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white" aria-label="Keranjang">
+    <Link href="/keranjang" className="relative rounded-md p-2.5 text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white" aria-label="Keranjang">
       <ShoppingCart className="h-5 w-5" />
       {count > 0 && (
         <span className="absolute -top-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">
@@ -104,7 +104,7 @@ export default function GuestLayout({ children }: { children: ReactNode }) {
             <ThemeToggle />
             <CartBadge />
             <button
-              className="rounded-md p-2 text-zinc-600 dark:text-zinc-300"
+              className="rounded-md p-2.5 text-zinc-600 dark:text-zinc-300"
               onClick={() => setOpen(!open)}
               aria-label="Buka menu"
               aria-expanded={open}

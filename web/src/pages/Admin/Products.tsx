@@ -1,5 +1,5 @@
 import { router, useForm } from "@inertiajs/react";
-import { ImagePlus, Loader2, RotateCcw, Search, X } from "lucide-react";
+import { ImagePlus, RotateCcw, Search, X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import AdminLayout from "../../components/AdminLayout";
 import FilterPanel from "../../components/FilterPanel";
@@ -189,13 +189,13 @@ export default function AdminProducts({ products: rawProducts, images, page, las
           </p>
         )}
         <div ref={sentinelRef} aria-hidden="true" className="h-1" />
-        <div className="flex justify-center">
-          {busy && (
-            <p className="flex items-center gap-2 text-sm text-zinc-500">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Memuat produk lain…
-            </p>
-          )}
-        </div>
+        {busy &&
+          [0, 1].map((i) => (
+            <div key={`sk-${i}`} aria-hidden="true" className="animate-pulse rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="h-4 w-1/3 rounded bg-zinc-200 dark:bg-zinc-800" />
+              <div className="mt-2 h-3 w-1/2 rounded bg-zinc-100 dark:bg-zinc-800/60" />
+            </div>
+          ))}
       </div>
     </div>
   );

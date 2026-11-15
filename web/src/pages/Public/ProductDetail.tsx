@@ -57,6 +57,26 @@ export default function ProductDetail({
   const reviews = rawReviews ?? [];
   const habis = product.type === "key" && product.key_stock !== undefined && product.key_stock === 0;
   const reviewForm = useForm({ rating: 0, body: "" });
+  const teksShare = `${product.title} - ${rupiah(product.price)}`;
+
+  // Web Share API bila tersedia (paling enak di ponsel); fallback WhatsApp.
+  const bagikan = async () => {
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: product.title, text: teksShare, url: share_url });
+        return;
+      } catch {
+        return; // user membatalkan share sheet
+      }
+    }
+    if (share_url) {
+      window.open(
+        `https://wa.me/?text=${encodeURIComponent(teksShare + "\n" + share_url)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+    }
+  };
   const images = rawImages ?? []; // props nil dihilangkan gonertia
   const { app_name } = usePage<SharedProps>().props;
   const metaTitle = (seo?.["seo.product.title"] || "{title} - {price}")
@@ -79,7 +99,7 @@ export default function ProductDetail({
         <title>{product.meta_title || metaTitle}</title>
         <meta name="description" content={product.meta_description || metaDesc} />
       </Head>
-      <section className="mx-auto max-w-4xl px-4 py-12">
+      <section className="mx-auto max-w-4xl px-4 pb-28 pt-12 sm:pb-12">
       <Link href="/produk" className="mb-6 inline-block text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
         ← Semua produk
       </Link>
@@ -139,14 +159,14 @@ export default function ProductDetail({
         <p className="mt-4 whitespace-pre-wrap leading-relaxed text-zinc-600 dark:text-zinc-400">
           {product.description}
         </p>
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        {product.type === "key" && product.key_stock !== undefined && (
+          <p className={`mt-4 text-sm font-medium ${habis ? "text-red-600" : "text-zinc-500"}`}>
+            Stok kunci: {product.key_stock}
+          </p>
+        )}
+        <div className="mt-8 hidden flex-wrap items-center justify-between gap-4 border-t border-zinc-200 pt-6 sm:flex dark:border-zinc-800">
           <span className="text-2xl font-extrabold text-brand-700 dark:text-brand-300">{rupiah(product.price)}</span>
           <div className="flex items-center gap-3">
-            {product.type === "key" && product.key_stock !== undefined && (
-              <span className={`text-sm font-medium ${habis ? "text-red-600" : "text-zinc-500"}`}>
-                Stok kunci: {product.key_stock}
-              </span>
-            )}
             <button
               onClick={add}
               disabled={habis}
@@ -166,16 +186,14 @@ export default function ProductDetail({
               {habis ? "Stok habis" : "Beli Sekarang"}
             </button>
             {share_url && (
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(product.title + " - " + rupiah(product.price) + "\n" + share_url)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Bagikan via WhatsApp"
-                title="Bagikan via WhatsApp"
-                className="flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-300 text-zinc-600 hover:border-brand-400 hover:text-brand-600 dark:border-zinc-700 dark:text-zinc-400"
+              <button
+                onClick={bagikan}
+                aria-label="Bagikan produk"
+                title="Bagikan produk"
+                className="flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-300 text-zinc-600 hover:border-brand-400 hover:text-brand-600 dark:border-zinc-700 dark:text-zinc-400"
               >
                 <Share2 className="h-4 w-4" />
-              </a>
+              </button>
             )}
           </div>
         </div>
@@ -257,6 +275,33 @@ export default function ProductDetail({
           )}
         </div>
       </section>
+
+      {/* CTA menempel di bawah (mobile): selalu terlihat saat scroll, di atas bottom nav */}
+      {!habis && (
+        <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-zinc-200 bg-white/95 px-4 py-2.5 backdrop-blur print:hidden sm:hidden dark:border-zinc-800 dark:bg-zinc-950/95">
+          <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+            <span className="text-lg font-extrabold text-brand-700 dark:text-brand-300">{rupiah(product.price)}</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={add}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-600 px-3.5 py-2.5 text-sm font-semibold text-brand-700 dark:text-brand-400"
+              >
+                {added ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
+                {added ? "Ditambahkan" : "Keranjang"}
+              </button>
+              <button
+                onClick={() => {
+                  addToCart(product);
+                  router.visit("/checkout");
+                }}
+                className="rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+              >
+                Beli Sekarang
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {related.length > 0 && (
         <section className="mt-12">

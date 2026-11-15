@@ -175,7 +175,21 @@ export default function AdminUsers({ users: rawUsers, page, last_page, total, fi
                 <td className="px-4 py-2.5 text-zinc-500">{u.created_at}</td>
               </tr>
             ))}
-          </tbody>
+          {busy && (
+              <tr key="sk-0">
+                <td colSpan={5} className="px-4 py-3">
+                  <div className="h-4 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+                </td>
+              </tr>
+            )}
+            {busy && (
+              <tr key="sk-1">
+                <td colSpan={5} className="px-4 py-3">
+                  <div className="h-4 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+                </td>
+              </tr>
+            )}
+            </tbody>
         </table>
         {items.length === 0 && (
           <p className="p-8 text-center text-sm text-zinc-500">
@@ -183,11 +197,6 @@ export default function AdminUsers({ users: rawUsers, page, last_page, total, fi
           </p>
         )}
         <div ref={sentinelRef} aria-hidden="true" className="h-1" />
-        {busy && (
-          <p className="flex items-center justify-center gap-2 py-3 text-sm text-zinc-500">
-            <Search className="h-4 w-4 animate-pulse" aria-hidden="true" /> Memuat pengguna lain…
-          </p>
-        )}
       </div>
     </div>
   );
