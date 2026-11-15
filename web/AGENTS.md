@@ -31,6 +31,10 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
   Link2) dari lucide-react; satu sumber untuk seluruh katalog.
 - `src/pages/Dev/LoginAs.tsx` — masuk sebagai akun mana pun (hanya bila
   prop `dev_login` aktif; route Go tidak terdaftar tanpa `STORE_DEV_LOGIN=1`).
+- `src/pages/Public/NotFound.tsx` — halaman 404 (catch-all GET server).
+- `src/pages/Public/ProductDetail.tsx` juga memuat: chip kategori/tag, stok
+  kunci (tombol habis disabled), produk terkait, ulasan (form hanya
+  `can_review`), share WhatsApp (`share_url`).
 - `src/components/FilterPanel.tsx` — toolbar filter collapsible (default
   tersembunyi, terbuka otomatis saat ada filter aktif, badge jumlah filter);
   dipakai katalog publik dan konsol admin (produk/users/orders/tiket).

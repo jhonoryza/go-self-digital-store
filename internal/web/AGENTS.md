@@ -28,6 +28,9 @@ request asing ditolak sebelum di-buffer.
 | `tickets.go` | tiket user: list/buat/balas; status open→answered→closed |
 | `admin.go` | konsol admin: stats + dashboard (periode all/bulanan/mingguan/harian → kartu order, series pendapatan per bucket, pie status), users (q/role/verified/sort + paginasi 12/hal), orders (q/status/sort + paginasi), produk CRUD multipart + stok kunci, maillog, tiket admin (q/status/sort + paginasi), gateway config/activate (props `configured`), daftar produk (q/kategori/type/status/sort + paginasi) |
 | tema toko | setting `brand.theme` (whitelist di `storeThemes`) → `Page()` menyuntik template datum `theme` (shell Go `data-theme`, tanpa FOUC) + prop `theme`; React `ThemeSync` menyinkronkan ulang utk shell statis; CSS override di `web/src/css/app.css` |
+| `reviews.go` | ulasan produk: migrasi 0007 (order_item_id unik), guard sudah-beli-lunas (`reviewEntitlement`), POST `/produk/{slug}/ulasan` (guardVerified) |
+| unduhan | berkas produk kini ke R2 (`files/<name>`, `putProductFile`) atau fallback disk; `GET /dl/…` → presigned URL TTL 15m (berubah tiap permintaan), fallback stream lokal |
+| 404 & SEO | catch-all `GET /{path...}` → Public/NotFound (XHR = JSON 404); `renderNotFound` dipakai handler resource hilang; robots.txt + sitemap.xml dinamis; OG tags lewat template datum `og_*` dari props["og"]; stok kunci divalidasi saat checkout (reject demand>stok) + warning "kunci kurang" di detail order |
 | `settings.go` | SMTP runtime, brand (nama+logo), **tema toko** (POST `/admin/setting/theme`), konten kebijakan, SEO per halaman |
 | `server_test.go` | test integrasi (bootstrap `testServer`: SQLite temp-dir nyata + httptest) |
 | `e2e_test.go` | test E2E per fitur (publik, auth, profil, checkout, webhook, unduhan, tiket, admin, middleware) |
