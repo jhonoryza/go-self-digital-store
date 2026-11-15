@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -65,6 +66,20 @@ func (s *r2Store) Put(ctx context.Context, key, contentType string, data []byte)
 
 func (s *r2Store) Delete(ctx context.Context, key string) error {
 	return s.client.RemoveObject(ctx, s.bucket, key, minio.RemoveObjectOptions{})
+}
+
+// PresignGet URL unduh bertanda-tangan dengan TTL — berbeda setiap kali
+// dipanggil dan kedaluwarsa sendiri. disposition memaksa nama berkas asli.
+func (s *r2Store) PresignGet(ctx context.Context, key string, ttl time.Duration, disposition string) (string, error) {
+	params := url.Values{}
+	if disposition != "" {
+		params.Set("response-content-disposition", `attachment; filename="`+disposition+`"`)
+	}
+	u, err := s.client.PresignedGetObject(ctx, s.bucket, key, ttl, params)
+	if err != nil {
+		return "", err
+	}
+	return u.String(), nil
 }
 
 func (s *r2Store) Get(ctx context.Context, key string) (string, []byte, error) {

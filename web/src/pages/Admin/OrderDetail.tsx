@@ -93,7 +93,14 @@ export default function AdminOrderDetail({ order, token }: Props) {
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
             {(order.items ?? []).map((i) => (
               <tr key={i.id}>
-                <td className="py-2">{i.title}</td>
+                <td className="py-2">
+                  {i.title}
+                  {i.type === "key" && paid && (i.license_keys?.length ?? 0) < i.qty && (
+                    <p className="mt-0.5 text-xs font-semibold text-amber-600">
+                      Stok kunci kurang: terpasang {i.license_keys?.length ?? 0} dari {i.qty} - isi pool kunci lalu kirim ulang email.
+                    </p>
+                  )}
+                </td>
                 <td className="py-2 text-center">{i.qty}</td>
                 <td className="py-2 text-right">{rupiah(i.price)}</td>
                 <td className="py-2 text-right">{rupiah(i.price * i.qty)}</td>

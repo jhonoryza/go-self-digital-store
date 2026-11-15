@@ -11,6 +11,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -78,6 +79,8 @@ func (s *Server) checkout(w http.ResponseWriter, r *http.Request) {
 		subtotal int
 		lines    []orderItemRow
 	)
+	keyDemand := map[int64]int{}   // id produk key -> total qty diminta
+	keyTitle := map[int64]string{} // id -> judul (untuk pesan error)
 	for _, it := range req.Items {
 		if it.Qty < 1 || it.Qty > 10 {
 			s.flashErr(w, r, "/keranjang", "Jumlah tidak valid.")
@@ -96,9 +99,24 @@ func (s *Server) checkout(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, http.StatusInternalServerError, "kesalahan server")
 			return
 		}
-		// produk key: satu kunci per unit — qty>1 boleh selama stok cukup (dicek saat lunas)
+		// produk key: satu kunci per unit — stok divalidasi agresif di sini agar
+		// pembeli tidak bisa memesan melebihi pool kunci admin (pelunasan tetap
+		// punya pemeriksaan kedua karena order lain bisa membayar lebih dulu)
+		if ptype == "key" {
+			keyDemand[it.ID] += it.Qty
+			keyTitle[it.ID] = title
+		}
 		subtotal += price * it.Qty
 		lines = append(lines, orderItemRow{ProductID: it.ID, Title: title, Price: price, Qty: it.Qty})
+	}
+
+	for id, demand := range keyDemand {
+		var stok int
+		s.DB.QueryRow(`SELECT COUNT(*) FROM license_keys WHERE product_id=? AND order_item_id IS NULL`, id).Scan(&stok)
+		if demand > stok {
+			s.flashErr(w, r, "/keranjang", fmt.Sprintf("Stok kunci %s tinggal %d - kurangi jumlah atau hubungi kami.", keyTitle[id], stok))
+			return
+		}
 	}
 
 	pct := couponPercent(s.DB, strings.ToUpper(strings.TrimSpace(req.Coupon)))
@@ -262,18 +280,18 @@ func (s *Server) loadOrder(orderNo string) (orderData, bool) {
 func (s *Server) payPage(w http.ResponseWriter, r *http.Request) {
 	o, ok := s.loadOrder(r.PathValue("order_no"))
 	if !ok {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	t := r.URL.Query().Get("t")
 	if t == "" || len(t) > 128 {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	var dlToken string
 	s.DB.QueryRow(`SELECT dl_token FROM orders WHERE order_no=?`, o.OrderNo).Scan(&dlToken)
 	if subtle.ConstantTimeCompare([]byte(t), []byte(dlToken)) != 1 {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	_, _, provider := activeProvider(s.DB)
@@ -303,14 +321,14 @@ func providerLabel(db *sql.DB, name string) string {
 // payNow POST /pay/{order_no} — tandai lunas manual, hanya mode simulasi.
 func (s *Server) payNow(w http.ResponseWriter, r *http.Request) {
 	if !isSimulated(mustProvider(s.DB)) {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	orderNo := r.PathValue("order_no")
 	var dlToken string
 	err := s.DB.QueryRow(`SELECT dl_token FROM orders WHERE order_no=?`, orderNo).Scan(&dlToken)
 	if err != nil || subtle.ConstantTimeCompare([]byte(r.PostFormValue("t")), []byte(dlToken)) != 1 {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	s.markOrderPaid(orderNo, r, 0)
@@ -367,7 +385,7 @@ func (s *Server) paymentCallback(w http.ResponseWriter, r *http.Request) {
 	// jalur 2: provider paygateway aktif
 	p, cfg, name := activeProvider(s.DB)
 	if isSimulated(p) {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	cb, err := p.ParseCallback(r.Header, body, cfg)

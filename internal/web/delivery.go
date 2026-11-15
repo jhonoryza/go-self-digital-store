@@ -5,8 +5,10 @@ package web
 // Plus drip reminder order pending.
 
 import (
+	"context"
 	"crypto/subtle"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -35,11 +37,15 @@ func (s *Server) onOrderPaid(orderNo string, r *http.Request) {
 		return
 	}
 
-	// 1. assign kunci lisensi: satu kunci per unit, dari pool stok admin
+	// 1. assign kunci lisensi: satu kunci per unit, dari pool stok admin.
+	// Checkout sudah memvalidasi stok, tapi order lain bisa membayar lebih
+	// dulu — kekurangan dicatat ke audit agar admin mengisi pool.
+	shortfall := []string{}
 	for _, it := range o.Items {
 		if it.Type != "key" {
 			continue
 		}
+		terpasang := 0
 		for q := 0; q < it.Qty; q++ {
 			var key string
 			err := s.DB.QueryRow(`UPDATE license_keys SET order_item_id=?
@@ -47,8 +53,16 @@ func (s *Server) onOrderPaid(orderNo string, r *http.Request) {
 				RETURNING key`, it.ID, it.ProductID).Scan(&key)
 			if err != nil {
 				logErr("stok kunci habis utk item %d (order %s): %v", it.ID, orderNo, err)
+				break
 			}
+			terpasang++
 		}
+		if terpasang < it.Qty {
+			shortfall = append(shortfall, fmt.Sprintf("%s: %d/%d kunci", it.Title, terpasang, it.Qty))
+		}
+	}
+	if len(shortfall) > 0 {
+		audit(s.DB, "order.key_shortfall", orderNo, strings.Join(shortfall, "; "))
 	}
 	o, _ = s.loadOrder(orderNo) // muat ulang agar kunci ter-assign ikut
 
@@ -92,6 +106,44 @@ func qtySuffix(qty int) string {
 	return ""
 }
 
+// filesPrefix prefix object key berkas produk di bucket R2.
+const filesPrefix = "files/"
+
+// downloadPresignTTL umur presigned URL unduhan.
+const downloadPresignTTL = 15 * time.Minute
+
+// putProductFile unggah berkas produk ke R2 (key files/<name>); false bila
+// R2 tidak tersedia atau gagal - pemanggil fallback menyimpan ke disk lokal.
+func (s *Server) putProductFile(name, contentType string, file io.Reader) bool {
+	if s.Images == nil {
+		return false
+	}
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return false
+	}
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	return s.Images.Put(ctx, filesPrefix+name, contentType, data) == nil
+}
+
+// hapusProductFile bersihkan berkas produk dari R2 dan/atau disk lokal
+// (berkas lama mungkin hanya ada di salah satu).
+func (s *Server) hapusProductFile(path string) {
+	if path == "" {
+		return
+	}
+	if s.Images != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		_ = s.Images.Delete(ctx, filesPrefix+path)
+		cancel()
+	}
+	_ = os.Remove(filepath.Join(s.filesDir(), filepath.Clean(path)))
+}
+
 // download GET /dl/{order_no}/{item_id}?t= — unduhan ber-token (order lunas).
 func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 	if ipLimited("download", s.clientIP(r)) {
@@ -117,6 +169,20 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	if fileName == "" {
+		fileName = filepath.Base(filePath)
+	}
+	// utamakan presigned URL R2: TTL 15 menit dan tautan selalu berubah
+	if r2s, ok := s.Images.(*r2Store); ok {
+		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+		u, err := r2s.PresignGet(ctx, filesPrefix+filePath, downloadPresignTTL, fileName)
+		cancel()
+		if err == nil {
+			http.Redirect(w, r, u, http.StatusFound)
+			return
+		}
+		logErr("presign %s/%s: %v - fallback disk lokal", orderNo, itemID, err)
+	}
 	f, err := os.Open(filepath.Join(s.filesDir(), filepath.Clean(filePath)))
 	if err != nil {
 		logErr("unduhan %s/%s: %v", orderNo, itemID, err)
@@ -124,9 +190,6 @@ func (s *Server) download(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer f.Close()
-	if fileName == "" {
-		fileName = filepath.Base(filePath)
-	}
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", `attachment; filename="`+fileName+`"`)
 	http.ServeContent(w, r, fileName, time.Now(), f)
