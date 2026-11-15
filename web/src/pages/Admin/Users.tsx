@@ -1,6 +1,7 @@
 import { RotateCcw, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import AdminLayout from "../../components/AdminLayout";
+import FilterPanel from "../../components/FilterPanel";
 import { useInfiniteList } from "../../lib/infinite";
 import type { SharedProps } from "../../types";
 
@@ -40,6 +41,7 @@ const SORTS: Record<string, string> = {
 export default function AdminUsers({ users: rawUsers, page, last_page, total, filters = {} }: Props) {
   const users = rawUsers ?? [];
   const adaFilter = Boolean(filters.q || filters.role || filters.verified);
+  const nFilter = [filters.q, filters.role, filters.verified].filter(Boolean).length;
   const { items, busy, sentinelRef } = useInfiniteList(
     users,
     page,
@@ -52,6 +54,7 @@ export default function AdminUsers({ users: rawUsers, page, last_page, total, fi
       <h1 className="text-2xl font-bold">Pengguna</h1>
 
       {/* toolbar cari + filter + urut */}
+      <FilterPanel activeCount={nFilter} id="filter-users">
       <form
         method="get"
         action="/admin/users"
@@ -137,6 +140,7 @@ export default function AdminUsers({ users: rawUsers, page, last_page, total, fi
           <span className="ml-auto text-sm text-zinc-500">{total} pengguna</span>
         </div>
       </form>
+      </FilterPanel>
 
       <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
         <table className="w-full text-sm">

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	inertia "github.com/romsar/gonertia/v3"
 
@@ -27,33 +28,150 @@ func (s *Server) guardAdmin(next func(http.ResponseWriter, *http.Request, auth.U
 }
 
 // adminDashboard GET /admin — statistik ringkas toko.
+// periodeDashboard pilihan rentang waktu kartu order + grafik.
+var periodeDashboard = map[string]bool{"": true, "bulanan": true, "mingguan": true, "harian": true}
+
+var bulanSingkat = [12]string{"Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"}
+
+// adminDashboard GET /admin — statistik + grafik. Parameter ?periode=
+// (kosong = semua, bulanan = 30 hari, mingguan = 7 hari, harian = hari ini)
+// memfilter kartu order serta kedua grafik; kartu pengguna/tiket/mail
+// tetap global.
 func (s *Server) adminDashboard(w http.ResponseWriter, r *http.Request, u auth.User) {
+	periode := r.URL.Query().Get("periode")
+	if !periodeDashboard[periode] {
+		periode = ""
+	}
+
+	now := time.Now().UTC()
+	var start time.Time
+	var step time.Duration
+	var nbucket int
+	switch periode {
+	case "harian":
+		start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+		step = time.Hour
+		nbucket = 24
+	case "mingguan":
+		start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -6)
+		step = 24 * time.Hour
+		nbucket = 7
+	case "bulanan":
+		start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -29)
+		step = 24 * time.Hour
+		nbucket = 30
+	default:
+		start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, -11, 0)
+		nbucket = 12
+	}
+
+	// batas + label tiap bucket
+	type bucket struct {
+		start, end time.Time
+		label      string
+	}
+	bounds := make([]bucket, 0, nbucket)
+	cur := start
+	for i := 0; i < nbucket; i++ {
+		var b bucket
+		if periode == "" {
+			b.start = time.Date(cur.Year(), cur.Month(), 1, 0, 0, 0, 0, time.UTC)
+			b.end = b.start.AddDate(0, 1, 0)
+			b.label = bulanSingkat[int(b.start.Month())-1]
+			cur = b.end
+		} else {
+			b.start = cur
+			b.end = cur.Add(step)
+			if periode == "harian" {
+				b.label = fmt.Sprintf("%02d", b.start.Hour())
+			} else {
+				b.label = fmt.Sprintf("%d/%d", b.start.Day(), int(b.start.Month()))
+			}
+			cur = b.end
+		}
+		bounds = append(bounds, b)
+	}
+
+	// indeks bucket untuk satu waktu
+	indeks := func(t time.Time) int {
+		if periode == "" {
+			i := (t.Year()-bounds[0].start.Year())*12 + int(t.Month()) - int(bounds[0].start.Month())
+			if i < 0 {
+				i = 0
+			}
+			if i >= nbucket {
+				i = nbucket - 1
+			}
+			return i
+		}
+		i := int(t.Sub(bounds[0].start) / step)
+		if i < 0 {
+			i = 0
+		}
+		if i >= nbucket {
+			i = nbucket - 1
+		}
+		return i
+	}
+
+	series := make([]map[string]any, nbucket)
+	for i, b := range bounds {
+		series[i] = map[string]any{"label": b.label, "value": 0}
+	}
+	startStr := start.Format("2006-01-02 15:04:05")
+	if periode == "" {
+		startStr = "" // grafik "semua" tetap mengikuti 12 bulan terakhir
+	}
+	if srows, err := s.DB.Query(`SELECT total, created_at FROM orders WHERE status='paid' AND created_at >= ?`, startStr); err == nil {
+		for srows.Next() {
+			var total int
+			var created string
+			if srows.Scan(&total, &created) == nil {
+				if t, err := time.Parse("2006-01-02 15:04:05", created); err == nil {
+					m := series[indeks(t)]
+					m["value"] = m["value"].(int) + total
+				}
+			}
+		}
+		srows.Close()
+	}
+
+	// pie distribusi status order dalam periode
+	pie := []map[string]any{}
+	pq := `SELECT status, COUNT(*) FROM orders`
+	pargs := []any{}
+	if periode != "" {
+		pq += ` WHERE created_at >= ?`
+		pargs = append(pargs, startStr)
+	}
+	pq += ` GROUP BY status ORDER BY COUNT(*) DESC`
+	if prows, err := s.DB.Query(pq, pargs...); err == nil {
+		for prows.Next() {
+			var st string
+			var n int
+			if prows.Scan(&st, &n) == nil {
+				pie = append(pie, map[string]any{"status": st, "count": n})
+			}
+		}
+		prows.Close()
+	}
+
+	// kartu statistik: order mengikuti periode, lainnya global
+	statWhere, statArgs := "", []any{}
+	if periode != "" {
+		statWhere = ` AND created_at >= ?`
+		statArgs = append(statArgs, startStr)
+	}
 	var revenue, ordersPaid, ordersPending, users, ticketsOpen, mailErr int
 	var licenseFree, licenseSold int
-	s.DB.QueryRow(`SELECT COALESCE(SUM(total),0) FROM orders WHERE status='paid'`).Scan(&revenue)
-	s.DB.QueryRow(`SELECT COUNT(*) FROM orders WHERE status='paid'`).Scan(&ordersPaid)
-	s.DB.QueryRow(`SELECT COUNT(*) FROM orders WHERE status='pending'`).Scan(&ordersPending)
+	s.DB.QueryRow(`SELECT COALESCE(SUM(total),0) FROM orders WHERE status='paid'`+statWhere, statArgs...).Scan(&revenue)
+	s.DB.QueryRow(`SELECT COUNT(*) FROM orders WHERE status='paid'`+statWhere, statArgs...).Scan(&ordersPaid)
+	s.DB.QueryRow(`SELECT COUNT(*) FROM orders WHERE status='pending'`+statWhere, statArgs...).Scan(&ordersPending)
 	s.DB.QueryRow(`SELECT COUNT(*) FROM users WHERE role='user'`).Scan(&users)
 	s.DB.QueryRow(`SELECT COUNT(*) FROM tickets WHERE status='open'`).Scan(&ticketsOpen)
 	s.DB.QueryRow(`SELECT COUNT(*) FROM mail_log WHERE status='error'`).Scan(&mailErr)
 	s.DB.QueryRow(`SELECT COUNT(*) FROM license_keys WHERE order_item_id IS NULL`).Scan(&licenseFree)
 	s.DB.QueryRow(`SELECT COUNT(*) FROM license_keys WHERE order_item_id IS NOT NULL`).Scan(&licenseSold)
-
-	// order terbaru
-	rows, err := s.DB.Query(`SELECT order_no, email, status, total, created_at FROM orders ORDER BY id DESC LIMIT 8`)
-	var recent []map[string]any
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var no, email, status, created string
-			var total int
-			if rows.Scan(&no, &email, &status, &total, &created) == nil {
-				recent = append(recent, map[string]any{
-					"order_no": no, "email": email, "status": status, "total": total, "created_at": created,
-				})
-			}
-		}
-	}
 
 	s.Page(w, r, "Admin/Dashboard", inertia.Props{
 		"stats": map[string]any{
@@ -66,8 +184,10 @@ func (s *Server) adminDashboard(w http.ResponseWriter, r *http.Request, u auth.U
 			"license_free":   licenseFree,
 			"license_sold":   licenseSold,
 		},
-		"recent": recent,
-		"flash":  flashFromQuery(r),
+		"periode": periode,
+		"series":  series,
+		"pie":     pie,
+		"flash":   flashFromQuery(r),
 	})
 }
 
@@ -155,9 +275,56 @@ func (s *Server) adminUsers(w http.ResponseWriter, r *http.Request, u auth.User)
 	})
 }
 
-// adminOrders GET /admin/orders — seluruh order.
+// adminOrderSorts mapping urutan konsol order.
+var adminOrderSorts = map[string]string{
+	"terbaru":  "created_at DESC, id DESC",
+	"terlama":  "created_at ASC, id ASC",
+	"termahal": "total DESC, id DESC",
+	"termurah": "total ASC, id DESC",
+}
+
+// adminOrders GET /admin/orders — daftar order dengan pencarian no/email,
+// filter status, urutan, dan paginasi 12/halaman. Parameter: q, status, sort, page.
 func (s *Server) adminOrders(w http.ResponseWriter, r *http.Request, u auth.User) {
-	rows, err := s.DB.Query(`SELECT order_no, email, status, subtotal, discount, total, pay_provider, COALESCE(paid_at,''), created_at FROM orders ORDER BY id DESC LIMIT 200`)
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	status := r.URL.Query().Get("status")
+	sort := r.URL.Query().Get("sort")
+	if _, ok := adminOrderSorts[sort]; !ok {
+		sort = "terbaru"
+	}
+
+	var conds []string
+	var args []any
+	if q != "" {
+		esc := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(q)
+		conds = append(conds, `(order_no LIKE ? ESCAPE '\' OR email LIKE ? ESCAPE '\')`)
+		args = append(args, "%"+esc+"%", "%"+esc+"%")
+	}
+	switch status {
+	case "paid", "pending":
+		conds = append(conds, `status=?`)
+		args = append(args, status)
+	}
+	where := ""
+	if len(conds) > 0 {
+		where = " WHERE " + strings.Join(conds, " AND ")
+	}
+
+	const adminPerPage = 12
+	var total int
+	s.DB.QueryRow(`SELECT COUNT(*) FROM orders`+where, args...).Scan(&total)
+	lastPage := (total + adminPerPage - 1) / adminPerPage
+	if lastPage < 1 {
+		lastPage = 1
+	}
+	page := 1
+	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p >= 1 && p <= lastPage {
+		page = p
+	}
+
+	rows, err := s.DB.Query(`SELECT order_no, email, status, subtotal, discount, total, pay_provider, COALESCE(paid_at,''), created_at FROM orders`+where+
+		` ORDER BY `+adminOrderSorts[sort]+` LIMIT ? OFFSET ?`,
+		append(append([]any{}, args...), adminPerPage, (page-1)*adminPerPage)...)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, "kesalahan server")
 		return
@@ -175,7 +342,14 @@ func (s *Server) adminOrders(w http.ResponseWriter, r *http.Request, u auth.User
 			})
 		}
 	}
-	s.Page(w, r, "Admin/Orders", inertia.Props{"orders": orders, "flash": flashFromQuery(r)})
+	s.Page(w, r, "Admin/Orders", inertia.Props{
+		"orders":    orders,
+		"page":      page,
+		"last_page": lastPage,
+		"total":     total,
+		"filters":   map[string]any{"q": q, "status": status, "sort": sort},
+		"flash":     flashFromQuery(r),
+	})
 }
 
 // adminOrderPaid POST /admin/orders/{no}/paid — tandai lunas manual (amount=total).
@@ -548,9 +722,56 @@ func (s *Server) adminMailLog(w http.ResponseWriter, r *http.Request, u auth.Use
 }
 
 // adminTickets GET /admin/tiket — seluruh tiket.
+// adminTicketSorts mapping urutan konsol tiket.
+var adminTicketSorts = map[string]string{
+	"terbaru": "t.updated_at DESC, t.id DESC",
+	"terlama": "t.updated_at ASC, t.id ASC",
+	"subjek":  "t.subject COLLATE NOCASE ASC",
+}
+
+// adminTickets GET /admin/tiket — daftar tiket dengan pencarian subjek/email/
+// nomor order, filter status, urutan, dan paginasi 12/halaman. Parameter:
+// q, status, sort, page.
 func (s *Server) adminTickets(w http.ResponseWriter, r *http.Request, u auth.User) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	status := r.URL.Query().Get("status")
+	sort := r.URL.Query().Get("sort")
+	if _, ok := adminTicketSorts[sort]; !ok {
+		sort = "terbaru"
+	}
+
+	var conds []string
+	var args []any
+	if q != "" {
+		esc := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(q)
+		conds = append(conds, `(t.subject LIKE ? ESCAPE '\' OR u.email LIKE ? ESCAPE '\' OR t.order_no LIKE ? ESCAPE '\')`)
+		args = append(args, "%"+esc+"%", "%"+esc+"%", "%"+esc+"%")
+	}
+	switch status {
+	case "open", "answered", "closed":
+		conds = append(conds, `t.status=?`)
+		args = append(args, status)
+	}
+	where := ""
+	if len(conds) > 0 {
+		where = " WHERE " + strings.Join(conds, " AND ")
+	}
+
+	const adminPerPage = 12
+	var total int
+	s.DB.QueryRow(`SELECT COUNT(*) FROM tickets t JOIN users u ON u.id = t.user_id`+where, args...).Scan(&total)
+	lastPage := (total + adminPerPage - 1) / adminPerPage
+	if lastPage < 1 {
+		lastPage = 1
+	}
+	page := 1
+	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p >= 1 && p <= lastPage {
+		page = p
+	}
+
 	rows, err := s.DB.Query(`SELECT t.id, t.order_no, t.subject, t.status, t.updated_at, u.email
-		FROM tickets t JOIN users u ON u.id = t.user_id ORDER BY t.updated_at DESC LIMIT 200`)
+		FROM tickets t JOIN users u ON u.id = t.user_id`+where+` ORDER BY `+adminTicketSorts[sort]+` LIMIT ? OFFSET ?`,
+		append(append([]any{}, args...), adminPerPage, (page-1)*adminPerPage)...)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, "kesalahan server")
 		return
@@ -567,7 +788,14 @@ func (s *Server) adminTickets(w http.ResponseWriter, r *http.Request, u auth.Use
 			})
 		}
 	}
-	s.Page(w, r, "Admin/Tickets", inertia.Props{"tickets": tickets, "flash": flashFromQuery(r)})
+	s.Page(w, r, "Admin/Tickets", inertia.Props{
+		"tickets":   tickets,
+		"page":      page,
+		"last_page": lastPage,
+		"total":     total,
+		"filters":   map[string]any{"q": q, "status": status, "sort": sort},
+		"flash":     flashFromQuery(r),
+	})
 }
 
 // adminTicketDetail GET /admin/tiket/{id}.

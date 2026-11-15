@@ -1855,6 +1855,123 @@ func TestE2EAdminLists(t *testing.T) {
 	if got := len(prop(t, page)["users"].([]any)); got != 3 {
 		t.Errorf("users page 2 = %d, mau 3", got)
 	}
+
+	// ---- admin/orders: filter status, search, sort, paginasi ----
+	// 5 order: 3 hari ini (2 paid 1 pending), 2 lama (40 & 400 hari)
+	fixtures := []struct {
+		no, email, status string
+		total             int
+		hariLalu          int
+	}{
+		{"ORD-A1", "a1@uji.id", "paid", 100000, 0},
+		{"ORD-A2", "a2@uji.id", "pending", 200000, 0},
+		{"ORD-A3", "a3@uji.id", "paid", 300000, 0},
+		{"ORD-B1", "b1@uji.id", "paid", 400000, 40},
+		{"ORD-C1", "c1@uji.id", "paid", 500000, 400},
+	}
+	for _, f := range fixtures {
+		_, err := d.Exec(`INSERT INTO orders (order_no, email, status, subtotal, total, pay_provider, created_at)
+			VALUES (?,?,?,?,?,?, datetime('now', ?))`,
+			f.no, f.email, f.status, f.total, f.total, "mock", fmt.Sprintf("-%d days", f.hariLalu))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	page = doPage(t, admin, ts.URL+"/admin/orders?status=paid")
+	if got := prop(t, page)["total"].(float64); got != 4 {
+		t.Errorf("orders status=paid total = %v, mau 4", got)
+	}
+	page = doPage(t, admin, ts.URL+"/admin/orders?q=ORD-A2")
+	if got := prop(t, page)["total"].(float64); got != 1 {
+		t.Errorf("orders q total = %v, mau 1", got)
+	}
+	page = doPage(t, admin, ts.URL+"/admin/orders?sort=termahal")
+	first = prop(t, page)["orders"].([]any)[0].(map[string]any)
+	if first["order_no"] != "ORD-C1" {
+		t.Errorf("orders termahal pertama = %v, mau ORD-C1", first["order_no"])
+	}
+	// paginasi 5 order → 1 halaman; pastikan props paginasi ada
+	page = doPage(t, admin, ts.URL+"/admin/orders")
+	if prop(t, page)["last_page"].(float64) != 1 || prop(t, page)["total"].(float64) != 5 {
+		t.Errorf("orders last_page/total = %v/%v, mau 1/5", prop(t, page)["last_page"], prop(t, page)["total"])
+	}
+
+	// ---- admin/tiket: filter status + search + sort ----
+	var bossID int64
+	d.QueryRow(`SELECT id FROM users WHERE email='boss@uji.id'`).Scan(&bossID)
+	tiketFixtures := []struct {
+		subj, status string
+	}{
+		{"Kunci tidak masuk", "open"},
+		{"Tanya invoice", "answered"},
+		{"Refund please", "closed"},
+	}
+	for _, tf := range tiketFixtures {
+		if _, err := d.Exec(`INSERT INTO tickets (user_id, order_no, subject, status) VALUES (?,?,?,?)`,
+			bossID, "ORD-A1", tf.subj, tf.status); err != nil {
+			t.Fatal(err)
+		}
+	}
+	page = doPage(t, admin, ts.URL+"/admin/tiket?status=open")
+	if got := prop(t, page)["total"].(float64); got != 1 {
+		t.Errorf("tiket status=open total = %v, mau 1", got)
+	}
+	page = doPage(t, admin, ts.URL+"/admin/tiket?q=invoice")
+	if got := prop(t, page)["total"].(float64); got != 1 {
+		t.Errorf("tiket q=invoice total = %v, mau 1", got)
+	}
+	page = doPage(t, admin, ts.URL+"/admin/tiket?sort=subjek")
+	first = prop(t, page)["tickets"].([]any)[0].(map[string]any)
+	if first["subject"] != "Kunci tidak masuk" {
+		t.Errorf("tiket subjek pertama = %v, mau Kunci tidak masuk", first["subject"])
+	}
+
+	// ---- dashboard admin: periode memfilter kartu + grafik ----
+	page = doPage(t, admin, ts.URL+"/admin")
+	if got := prop(t, page)["periode"]; got != "" {
+		t.Errorf("periode default = %v, mau kosong", got)
+	}
+	if got := prop(t, page)["series"].([]any); len(got) != 12 {
+		t.Errorf("series semua = %d bucket, mau 12", len(got))
+	}
+	// order terbaru (recent) sudah dihapus dari props
+	if _, ok := prop(t, page)["recent"]; ok {
+		t.Error("props recent masih ada, seharusnya dihapus")
+	}
+	// periode mingguan: 7 bucket, hanya order 3 hari ini terhitung
+	page = doPage(t, admin, ts.URL+"/admin?periode=mingguan")
+	if got := len(prop(t, page)["series"].([]any)); got != 7 {
+		t.Errorf("series mingguan = %d bucket, mau 7", got)
+	}
+	st := prop(t, page)["stats"].(map[string]any)
+	if st["orders_paid"].(float64) != 2 {
+		t.Errorf("mingguan orders_paid = %v, mau 2", st["orders_paid"])
+	}
+	// periode bulanan (30 hari): ORD-B1 (40 hari) tidak terhitung
+	page = doPage(t, admin, ts.URL+"/admin?periode=bulanan")
+	st = prop(t, page)["stats"].(map[string]any)
+	if st["orders_paid"].(float64) != 2 {
+		t.Errorf("bulanan orders_paid = %v, mau 2", st["orders_paid"])
+	}
+	if got := len(prop(t, page)["series"].([]any)); got != 30 {
+		t.Errorf("series bulanan = %d bucket, mau 30", got)
+	}
+	// semua: revenue total 1.3jt (A1..C1 lunas)
+	page = doPage(t, admin, ts.URL+"/admin")
+	st = prop(t, page)["stats"].(map[string]any)
+	if st["revenue"].(float64) != 1300000 {
+		t.Errorf("revenue semua = %v, mau 1300000", st["revenue"])
+	}
+	// pie memuat status paid & pending
+	pie := prop(t, page)["pie"].([]any)
+	statusPie := map[string]float64{}
+	for _, it := range pie {
+		m := it.(map[string]any)
+		statusPie[m["status"].(string)] = m["count"].(float64)
+	}
+	if statusPie["paid"] != 4 || statusPie["pending"] != 1 {
+		t.Errorf("pie = %v, mau paid 4 pending 1", statusPie)
+	}
 }
 
 // ---- setting tema toko: simpan, shell membawa data-theme, validasi ----

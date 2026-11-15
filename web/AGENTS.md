@@ -31,6 +31,9 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
   Link2) dari lucide-react; satu sumber untuk seluruh katalog.
 - `src/pages/Dev/LoginAs.tsx` — masuk sebagai akun mana pun (hanya bila
   prop `dev_login` aktif; route Go tidak terdaftar tanpa `STORE_DEV_LOGIN=1`).
+- `src/components/FilterPanel.tsx` — toolbar filter collapsible (default
+  tersembunyi, terbuka otomatis saat ada filter aktif, badge jumlah filter);
+  dipakai katalog publik dan konsol admin (produk/users/orders/tiket).
 - `src/lib/infinite.ts` — hook `useInfiniteList(itemsProp, page, lastPage, sig, only)`:
   akumulasi kartu antar halaman untuk infinite scroll (sig filter berubah =
   reset, page+1 = append); dipakai katalog publik + konsol admin produk/users

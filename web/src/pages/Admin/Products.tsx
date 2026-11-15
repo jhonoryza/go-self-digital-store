@@ -2,6 +2,7 @@ import { router, useForm } from "@inertiajs/react";
 import { ImagePlus, Loader2, RotateCcw, Search, X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import AdminLayout from "../../components/AdminLayout";
+import FilterPanel from "../../components/FilterPanel";
 import { useInfiniteList } from "../../lib/infinite";
 import { rupiah, type ProductImage, type SharedProps } from "../../types";
 
@@ -63,6 +64,7 @@ export default function AdminProducts({ products: rawProducts, images, page, las
   const products = rawProducts ?? [];
   const categories = rawCategories ?? [];
   const adaFilter = Boolean(filters.q || filters.kategori || filters.type || filters.status);
+  const nFilter = [filters.q, filters.kategori, filters.type, filters.status].filter(Boolean).length;
   const { items, busy, sentinelRef } = useInfiniteList(
     products,
     page,
@@ -84,6 +86,7 @@ export default function AdminProducts({ products: rawProducts, images, page, las
       </div>
 
       {/* toolbar cari + filter + urut: satu form GET, server yang menyaring */}
+      <FilterPanel activeCount={nFilter} id="filter-produk">
       <form
         method="get"
         action="/admin/produk"
@@ -142,6 +145,7 @@ export default function AdminProducts({ products: rawProducts, images, page, las
           <span className="ml-auto text-sm text-zinc-500">{total} produk</span>
         </div>
       </form>
+      </FilterPanel>
 
       {showCreate && (
         <ProductForm
