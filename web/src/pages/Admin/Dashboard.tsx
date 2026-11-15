@@ -53,7 +53,7 @@ function GrafikGaris({ data }: { data: { label: string; value: number }[] }) {
       {[0.25, 0.5, 0.75, 1].map((f) => (
         <line key={f} x1={pad.l} x2={W - pad.r} y1={y(max * f)} y2={y(max * f)} stroke="currentColor" className="text-zinc-200 dark:text-zinc-800" strokeWidth="1" />
       ))}
-      <polygon points={`${x(0)},${H - pad.b} L ${pts.replaceAll(" ", " L ")} L ${x(data.length - 1)},${H - pad.b}`} fill="var(--color-brand-500)" opacity="0.15" />
+      <polygon points={`${x(0)},${H - pad.b} ${pts} ${x(data.length - 1)},${H - pad.b}`} fill="var(--color-brand-500)" opacity="0.15" />
       <polyline points={pts} fill="none" stroke="var(--color-brand-600)" strokeWidth="2.5" strokeLinejoin="round" />
       {data.map((d, i) => (
         <circle key={i} cx={x(i)} cy={y(d.value)} r="2.5" fill="var(--color-brand-600)" />
