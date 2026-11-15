@@ -1,6 +1,6 @@
 import { Head, Link } from "@inertiajs/react";
-import { ChevronLeft, ChevronRight, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
-import type { ReactNode } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
 import ProductThumb from "../../components/ProductThumb";
 import { rupiah, type CatalogFilters, type Product, type SharedProps } from "../../types";
@@ -66,6 +66,9 @@ export default function Products({
   const from = total === 0 ? 0 : (page - 1) * products.length + 1;
   const to = (page - 1) * products.length + products.length;
   const adaFilter = Boolean(filters.q || filters.kategori || filters.tag || filters.harga_min || filters.harga_max);
+  const filterCount = [filters.q, filters.kategori, filters.tag, filters.harga_min, filters.harga_max].filter(Boolean).length;
+  // panel tersembunyi secara default; terbuka otomatis saat ada filter aktif
+  const [filterOpen, setFilterOpen] = useState(adaFilter);
 
 
   return (
@@ -80,8 +83,30 @@ export default function Products({
           Produk digital siap unduh - terkirim otomatis ke email setelah lunas.
         </p>
 
+        {/* Tombol buka/tutup panel filter; angka = jumlah filter aktif */}
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => setFilterOpen(!filterOpen)}
+            aria-expanded={filterOpen}
+            aria-controls="panel-filter"
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 hover:border-brand-400 hover:text-brand-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-brand-500 dark:hover:text-brand-300"
+          >
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            Filter
+            {filterCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 text-[10px] font-bold text-white">
+                {filterCount}
+              </span>
+            )}
+            <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${filterOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+          </button>
+        </div>
+
         {/* Panel cari + filter + urut: satu form GET, server yang menyaring */}
+        {filterOpen && (
         <form
+          id="panel-filter"
           method="get"
           action="/produk"
           className="mb-8 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
@@ -205,6 +230,7 @@ export default function Products({
             )}
           </div>
         </form>
+        )}
 
         {products.length === 0 ? (
           <p className="rounded-xl border border-dashed border-zinc-300 p-12 text-center text-zinc-500 dark:border-zinc-700">
