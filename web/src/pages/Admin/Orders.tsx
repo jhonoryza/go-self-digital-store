@@ -1,5 +1,6 @@
 import { router } from "@inertiajs/react";
 import type { ReactNode } from "react";
+import { Link } from "@inertiajs/react";
 import AdminLayout from "../../components/AdminLayout";
 import { rupiah, type SharedProps } from "../../types";
 
@@ -37,7 +38,9 @@ export default function AdminOrders({ orders }: Props) {
             {(orders ?? []).map((o) => (
               <tr key={o.order_no}>
                 <td className="px-4 py-2.5">
-                  <span className="font-mono font-semibold">{o.order_no}</span>
+                  <Link href={`/admin/orders/${o.order_no}`} className="font-mono font-semibold text-brand-700 hover:underline dark:text-brand-400">
+                    {o.order_no}
+                  </Link>
                   <p className="text-xs text-zinc-500">{o.created_at}</p>
                 </td>
                 <td className="px-4 py-2.5 text-zinc-600 dark:text-zinc-400">{o.email}</td>

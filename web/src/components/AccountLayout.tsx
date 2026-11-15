@@ -6,7 +6,7 @@ import type { SharedProps } from "../types";
 // Layout area akun (user): header + nav tab. Logout via POST (CSRF otomatis
 // dari interceptor api.ts).
 export default function AccountLayout({ children }: { children: ReactNode }) {
-  const { auth_user, app_name } = usePage<SharedProps>().props;
+  const { auth_user, app_name, brand_logo } = usePage<SharedProps>().props;
   const { url } = usePage();
 
   const tabs = [
@@ -20,7 +20,8 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur print:hidden dark:border-zinc-800 dark:bg-zinc-950/90">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <Link href="/" className="text-lg font-bold tracking-tight">
+          <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
+            {brand_logo && <img src={brand_logo} alt="" className="h-7 w-7 object-contain" />}
             {app_name ?? "Toko Digital"}
           </Link>
           <div className="flex items-center gap-3 text-sm">

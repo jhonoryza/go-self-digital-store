@@ -87,6 +87,10 @@ func (s *Server) Page(w http.ResponseWriter, r *http.Request, component string, 
 		props = inertia.Props{}
 	}
 	props["dev_login"] = s.Cfg.DevLogin // navbar menampilkan pintasan /dev/login
+	props["app_name"] = s.appName()
+	if logo := s.brandLogoURL(r); logo != "" {
+		props["brand_logo"] = logo
+	}
 	if u, raw, ok := auth.Resolve(s.DB, r); ok {
 		props["auth_user"] = map[string]any{"id": u.ID, "email": u.Email, "name": u.Name, "role": u.Role}
 		props["csrf_token"] = auth.CSRFToken(raw)

@@ -1,5 +1,5 @@
 import { Infinity as InfinityIcon, MailCheck, Wallet } from "lucide-react";
-import { Link } from "@inertiajs/react";
+import { Head, Link, usePage } from "@inertiajs/react";
 import type { ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
 import ProductThumb from "../../components/ProductThumb";
@@ -7,11 +7,17 @@ import { rupiah, type Product, type SharedProps } from "../../types";
 
 interface Props extends SharedProps {
   featured: Product[];
+  seo?: { "seo.home.title"?: string; "seo.home.description"?: string };
 }
 
-export default function Landing({ featured }: Props) {
+export default function Landing({ featured, seo }: Props) {
+  const { app_name } = usePage<SharedProps>().props;
   return (
     <>
+      <Head>
+        <title>{seo?.["seo.home.title"] || (app_name ?? "Toko Digital")}</title>
+        {seo?.["seo.home.description"] && <meta name="description" content={seo["seo.home.description"]} />}
+      </Head>
       {/* Hero */}
       <section className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
         <div className="mx-auto max-w-6xl px-4 py-20 text-center sm:py-28">
@@ -76,9 +82,9 @@ export default function Landing({ featured }: Props) {
                 className="group rounded-xl border border-zinc-200 bg-white p-5 transition hover:border-brand-400 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
               >
                 <ProductThumb product={p} />
-                <h3 className="font-semibold group-hover:text-brand-700 dark:group-hover:text-brand-400">{p.title}</h3>
+                <h3 className="font-semibold group-hover:text-brand-700 dark:group-hover:text-brand-300">{p.title}</h3>
                 <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">{p.description}</p>
-                <p className="mt-3 font-bold text-brand-700 dark:text-brand-400">{rupiah(p.price)}</p>
+                <p className="mt-3 font-bold text-brand-700 dark:text-brand-300">{rupiah(p.price)}</p>
               </Link>
             ))}
           </div>

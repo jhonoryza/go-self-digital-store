@@ -200,11 +200,11 @@ func (s *Server) forgotPassword(w http.ResponseWriter, r *http.Request) {
 		link := s.baseURL(r) + "/reset-password?token=" + token
 		if s.Mail.Enabled() {
 			go func() {
-				body := mail.Style(s.Cfg.AppName,
+				body := mail.Style(s.appName(),
 					`<p>Halo,</p><p>Ada permintaan reset password untuk akun Anda. Tautan berlaku 1 jam:</p>
 					 <p>`+mail.Button(link, "Reset Password")+`</p>
 					 <p style="color:#71717a;">Bukan Anda? Abaikan email ini - password tidak berubah.</p>`)
-				s.Mail.Send(email, "Reset password - "+s.Cfg.AppName, body)
+				s.Mail.Send(email, "Reset password - "+s.appName(), body)
 			}()
 		}
 	}

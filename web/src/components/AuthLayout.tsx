@@ -7,7 +7,7 @@ import type { SharedProps } from "../types";
 export default function AuthLayout({ title, children }: { title: string; children: ReactNode }) {
   const { flash, app_name } = usePage<SharedProps>().props;
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-zinc-50 px-4 dark:bg-zinc-950">
+    <div className="relative flex min-h-screen items-center justify-center bg-zinc-50 px-4 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>

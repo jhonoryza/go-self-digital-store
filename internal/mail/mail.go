@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/smtp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,10 +23,29 @@ type Config struct {
 	From string
 }
 
-// Mailer kirim email + catat hasil ke mail_log.
+// Mailer kirim email + catat hasil ke mail_log. Config bisa diganti saat
+// runtime (halaman setting admin) — dibaca di balik mutex.
 type Mailer struct {
-	db *sql.DB
+	db  *sql.DB
+	mu  sync.RWMutex
 	cfg Config
+}
+
+// Reconfigure ganti konfigurasi SMTP tanpa restart (dipanggil handler setting).
+func (m *Mailer) Reconfigure(cfg Config) {
+	if m == nil {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.cfg = cfg
+}
+
+// currentCfg salinan config terkini (aman dipanggil dari goroutine kirim).
+func (m *Mailer) currentCfg() Config {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.cfg
 }
 
 // New siapkan mailer; log ditulis ke tabel mail_log.
@@ -34,15 +54,19 @@ func New(db *sql.DB, cfg Config) *Mailer {
 }
 
 // Enabled true bila SMTP dikonfigurasi.
-func (m *Mailer) Enabled() bool { return m != nil && m.cfg.Host != "" }
+func (m *Mailer) Enabled() bool { return m != nil && m.currentCfg().Host != "" }
 
 // Send kirim email HTML; selalu catat hasil ke mail_log (juga saat SMTP mati).
 func (m *Mailer) Send(to, subject, html string) {
-	if m == nil || m.cfg.Host == "" {
+	if m == nil {
+		return
+	}
+	cfg := m.currentCfg()
+	if cfg.Host == "" {
 		m.log(to, subject, "error", "smtp belum dikonfigurasi")
 		return
 	}
-	err := m.deliver(to, subject, html)
+	err := m.deliver(cfg, to, subject, html)
 	if err != nil {
 		m.log(to, subject, "error", err.Error())
 		return
@@ -50,13 +74,13 @@ func (m *Mailer) Send(to, subject, html string) {
 	m.log(to, subject, "sent", "")
 }
 
-func (m *Mailer) deliver(to, subject, html string) error {
-	addr := net.JoinHostPort(m.cfg.Host, m.cfg.Port)
+func (m *Mailer) deliver(cfg Config, to, subject, html string) error {
+	addr := net.JoinHostPort(cfg.Host, cfg.Port)
 	conn, err := net.DialTimeout("tcp", addr, 5*time.Second)
 	if err != nil {
 		return fmt.Errorf("dial smtp: %w", err)
 	}
-	c, err := smtp.NewClient(conn, m.cfg.Host)
+	c, err := smtp.NewClient(conn, cfg.Host)
 	if err != nil {
 		conn.Close()
 		return fmt.Errorf("smtp client: %w", err)
@@ -64,18 +88,18 @@ func (m *Mailer) deliver(to, subject, html string) error {
 	defer c.Close()
 
 	if ok, _ := c.Extension("STARTTLS"); ok {
-		if err := c.StartTLS(&tls.Config{ServerName: m.cfg.Host}); err != nil {
+		if err := c.StartTLS(&tls.Config{ServerName: cfg.Host}); err != nil {
 			return fmt.Errorf("starttls: %w", err)
 		}
 	}
-	if m.cfg.User != "" {
-		if err := c.Auth(smtp.PlainAuth("", m.cfg.User, m.cfg.Pass, m.cfg.Host)); err != nil {
+	if cfg.User != "" {
+		if err := c.Auth(smtp.PlainAuth("", cfg.User, cfg.Pass, cfg.Host)); err != nil {
 			return fmt.Errorf("auth smtp: %w", err)
 		}
 	}
-	from := m.cfg.From
+	from := cfg.From
 	if from == "" {
-		from = m.cfg.User
+		from = cfg.User
 	}
 	if err := c.Mail(from); err != nil {
 		return fmt.Errorf("mail from: %w", err)
@@ -94,6 +118,21 @@ func (m *Mailer) deliver(to, subject, html string) error {
 		return err
 	}
 	return c.Quit()
+}
+
+// TestSend kirim email uji memakai config yang diberikan (tanpa mengubah
+// config aktif); hasil tetap dicatat ke mail_log.
+func (m *Mailer) TestSend(cfg Config, to, subject, html string) error {
+	if m == nil || cfg.Host == "" {
+		return fmt.Errorf("smtp belum dikonfigurasi")
+	}
+	err := m.deliver(cfg, to, subject, html)
+	if err != nil {
+		m.log(to, subject, "error", err.Error())
+		return err
+	}
+	m.log(to, subject, "sent", "")
+	return nil
 }
 
 // buildMessage pesan RFC822 minimal, HTML utf-8.
@@ -119,17 +158,33 @@ func truncate(s string, n int) string {
 	return s
 }
 
-// Style dasar email HTML (inline agar aman di klien email).
+// Style amplop email table-based: semua spacing lewat td padding + bgcolor
+// attribute (bukan CSS background/margin/flex) agar kompatibel dengan klien
+// email lama (Outlook, webmail). Struktur: header brand, body, footer.
 func Style(appName, body string) string {
-	return `<!DOCTYPE html><html><body style="margin:0;padding:24px;background:#f4f4f5;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#18181b;">
-<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px;border:1px solid #e4e4e7;">
-<div style="font-size:18px;font-weight:700;margin-bottom:4px;">` + appName + `</div>
-<div style="color:#71717a;font-size:13px;margin-bottom:24px;">Transaksi produk digital</div>` + body + `
-<div style="color:#a1a1aa;font-size:12px;margin-top:32px;border-top:1px solid #e4e4e7;padding-top:16px;">Email otomatis — jangan dibalas langsung.</div>
-</div></body></html>`
+	var b strings.Builder
+	b.WriteString(`<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"/>` +
+		`<meta name="viewport" content="width=device-width,initial-scale=1"/></head>` +
+		`<body style="margin:0;padding:0;background-color:#f4f4f5;">` +
+		`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f5"><tr><td align="center" style="padding:24px 12px;">` +
+		`<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:560px;max-width:560px;border:1px solid #e4e4e7;">` +
+		`<tr><td bgcolor="#18181b" style="padding:20px 32px;font-family:Arial,Helvetica,sans-serif;">` +
+		`<span style="color:#ffffff;font-size:18px;font-weight:bold;">` + appName + `</span>` +
+		`<br><span style="color:#a1a1aa;font-size:12px;">Transaksi produk digital</span>` +
+		`</td></tr>` +
+		`<tr><td style="padding:28px 32px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#18181b;">` +
+		body +
+		`</td></tr>` +
+		`<tr><td style="padding:16px 32px;border-top:1px solid #e4e4e7;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#a1a1aa;">` +
+		`Email otomatis - jangan dibalas langsung.` +
+		`</td></tr></table></td></tr></table></body></html>`)
+	return b.String()
 }
 
-// Button CTA inline.
+// Button CTA berbasis tabel (tanpa display:inline-block pada tr/td).
 func Button(href, label string) string {
-	return `<a href="` + href + `" style="display:inline-block;background:#18181b;color:#ffffff;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600;">` + label + `</a>`
+	return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>` +
+		`<td bgcolor="#277758" style="border-radius:8px;">` +
+		`<a href="` + href + `" style="display:inline-block;padding:10px 18px;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:8px;">` + label + `</a>` +
+		`</td></tr></table>`
 }

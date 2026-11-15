@@ -13,6 +13,7 @@ export interface SharedProps extends PageProps {
   csrf_token?: string;
   flash?: { ok?: string; err?: string };
   app_name?: string;
+  brand_logo?: string; // URL logo toko dari bucket R2 (halaman setting admin)
   dev_login?: boolean; // pintu dev /dev/login aktif (STORE_DEV_LOGIN=1)
 }
 
@@ -32,6 +33,8 @@ export interface Product {
   type: string;
   featured: boolean;
   image_url?: string; // gambar pertama (kartu katalog)
+  meta_title?: string; // SEO opsional (form admin)
+  meta_description?: string;
 }
 
 // gambar produk yang tersimpan di bucket R2 (maks 5 per produk)

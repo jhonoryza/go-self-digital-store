@@ -1458,3 +1458,75 @@ func TestE2EMultipleDownloadLinks(t *testing.T) {
 		}
 	}
 }
+
+// ---- halaman setting admin (SMTP/konten/SEO) + detail order admin + SEO produk ----
+
+func TestE2EAdminSettingsAndDetail(t *testing.T) {
+	_, ts, d := testServer(t)
+	seedUser(t, d, "boss@uji.id", "adminpass1", "admin")
+	admin := loginCookie(t, ts, "boss@uji.id", "adminpass1")
+	acsrf := csrfOf(t, admin, ts, "/admin")
+
+	// simpan konten kebijakan + seo
+	resC := doPostCSRF(t, admin, ts.URL+"/admin/setting/content",
+		`{"privacy":"# Privasi Uji\nIsi privasi dari setting.","terms":"# Ketentuan Uji\nIsi ketentuan."}`, acsrf)
+	if loc := resC.Header.Get("Location"); !strings.Contains(loc, "ok=") {
+		t.Fatalf("simpan konten = %d | %s", resC.StatusCode, loc)
+	}
+	doPostCSRF(t, admin, ts.URL+"/admin/setting/seo",
+		`{"seo.home.title":"Toko Uji - Home","seo.products.title":"Katalog Toko Uji","seo.product.title":"Beli {title}","seo.product.description":"Deskripsi {title}"}`, acsrf)
+
+	// halaman privacy memakai konten dari setting
+	page := doPage(t, newClient(), ts.URL+"/privacy")
+	if !strings.Contains(fmt.Sprint(prop(t, page)["content"]), "Isi privasi dari setting.") {
+		t.Error("konten privacy setting tidak tampil")
+	}
+	// landing membawa seo props
+	page = doPage(t, newClient(), ts.URL+"/")
+	if prop(t, page)["seo"].(map[string]any)["seo.home.title"] != "Toko Uji - Home" {
+		t.Error("seo home tidak masuk props")
+	}
+
+	// produk dengan meta SEO
+	res := multipartPost(t, admin, ts.URL+"/admin/produk", acsrf, map[string]string{
+		"slug": "produk-seo", "title": "Produk SEO", "price": "5000", "type": "key",
+		"meta_title": "Meta Khusus", "meta_description": "Desc khusus",
+	}, "", "", "")
+	if res.StatusCode != http.StatusFound {
+		t.Fatalf("create produk seo = %d", res.StatusCode)
+	}
+	page = doPage(t, newClient(), ts.URL+"/produk/produk-seo")
+	pd := prop(t, page)["product"].(map[string]any)
+	if pd["meta_title"] != "Meta Khusus" || pd["meta_description"] != "Desc khusus" {
+		t.Errorf("meta produk = %v %v", pd["meta_title"], pd["meta_description"])
+	}
+
+	// order user → admin lihat detail
+	uid := seedUser(t, d, "pembeli@uji.id", "rahasia123", "user")
+	_ = uid
+	pid := seedProduct(t, d, "produk-detail-uji", 20000, "key")
+	seedKeys(t, d, pid, 1)
+	user := loginCookie(t, ts, "pembeli@uji.id", "rahasia123")
+	orderNo, token := checkoutOrder(t, user, ts,
+		fmt.Sprintf(`{"items":[{"id":%d,"qty":1}],"email":"pembeli@uji.id"}`, pid))
+	if res := paySimulasi(t, user, ts, orderNo, token); res.StatusCode != http.StatusFound {
+		t.Fatalf("pay = %d", res.StatusCode)
+	}
+
+	// admin lihat detail order user
+	page = doPage(t, admin, ts.URL+"/admin/orders/"+orderNo)
+	o := prop(t, page)["order"].(map[string]any)
+	if o["order_no"] != orderNo || o["email"] != "pembeli@uji.id" {
+		t.Errorf("detail order salah: %v %v", o["order_no"], o["email"])
+	}
+	if len(o["items"].([]any)) != 1 {
+		t.Error("item detail order hilang")
+	}
+	if fmt.Sprint(prop(t, page)["token"]) == "" {
+		t.Error("token unduh tidak diberikan ke admin")
+	}
+	// user lain tak bisa akses halaman admin
+	if res := doGetRes(t, user, ts.URL+"/admin/orders/"+orderNo, map[string]string{"X-Inertia": "true"}); res.StatusCode != http.StatusForbidden {
+		t.Errorf("detail order utk user biasa = %d, mau 403", res.StatusCode)
+	}
+}

@@ -22,7 +22,7 @@ export default function Orders({ orders }: Props) {
       <h1 className="text-2xl font-bold">Pesanan Saya</h1>
       {(!orders || orders.length === 0) ? (
         <p className="rounded-xl border border-dashed border-zinc-300 p-12 text-center text-zinc-500 dark:border-zinc-700">
-          Belum ada pesanan. <Link href="/produk" className="text-brand-600 hover:underline">Mulai belanja →</Link>
+          Belum ada pesanan. <Link href="/produk" className="text-brand-600 hover:underline dark:text-brand-400">Mulai belanja →</Link>
         </p>
       ) : (
         <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">

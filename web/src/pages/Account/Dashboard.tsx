@@ -37,7 +37,7 @@ export default function Dashboard({ stats }: Props) {
         </div>
         <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-sm text-zinc-500">Total belanja</p>
-          <p className="mt-1 text-3xl font-extrabold text-brand-700 dark:text-brand-400">{rupiah(stats.total_spend)}</p>
+          <p className="mt-1 text-3xl font-extrabold text-brand-700 dark:text-brand-300">{rupiah(stats.total_spend)}</p>
         </div>
       </div>
 
@@ -49,7 +49,7 @@ export default function Dashboard({ stats }: Props) {
       </div>
       {(!stats.recent || stats.recent.length === 0) ? (
         <p className="rounded-xl border border-dashed border-zinc-300 p-8 text-center text-zinc-500 dark:border-zinc-700">
-          Belum ada pesanan. <Link href="/produk" className="text-brand-600 hover:underline">Mulai belanja</Link>
+          Belum ada pesanan. <Link href="/produk" className="text-brand-600 hover:underline dark:text-brand-400">Mulai belanja</Link>
         </p>
       ) : (
         <div className="space-y-3">

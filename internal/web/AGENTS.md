@@ -30,6 +30,7 @@ request asing ditolak sebelum di-buffer.
 | `e2e_test.go` | test E2E per fitur (publik, auth, profil, checkout, webhook, unduhan, tiket, admin, middleware) |
 | `dev.go` | dev login-as (`/dev/login`, hanya bila `STORE_DEV_LOGIN=1`; route tidak terdaftar bila mati) |
 | `images.go` | gambar produk: upload/hapus ke R2 (minio-go, prefix per-app di bucket `webapp`), proxy `GET /images/{key...}` hanya untuk prefix app; `imageStore` interface (stub di test) |
+| `settings.go` | setting runtime admin: SMTP (Mailer.Reconfigure + TestSend), brand nama/logo (R2), konten kebijakan, SEO; tersimpan di tabel settings; `s.appName()` = brand.name menimpa config env |
 
 ## Local Contracts
 

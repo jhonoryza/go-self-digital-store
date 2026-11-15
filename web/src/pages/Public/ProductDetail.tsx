@@ -1,4 +1,4 @@
-import { Link, router } from "@inertiajs/react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import { Check, ShoppingCart } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
@@ -9,9 +9,17 @@ import { rupiah, type Product, type ProductImage, type SharedProps } from "../..
 interface Props extends SharedProps {
   product: Product;
   images: ProductImage[];
+  seo?: { "seo.product.title"?: string; "seo.product.description"?: string };
 }
 
-export default function ProductDetail({ product, images }: Props) {
+export default function ProductDetail({ product, images, seo }: Props) {
+  const { app_name } = usePage<SharedProps>().props;
+  const metaTitle = (seo?.["seo.product.title"] || "{title} - {price}")
+    .replace("{title}", product.title)
+    .replace("{price}", rupiah(product.price));
+  const metaDesc = (seo?.["seo.product.description"] || "{title}: {description}")
+    .replace("{title}", product.title)
+    .replace("{description}", product.description.slice(0, 150));
   const [added, setAdded] = useState(false);
   const [selected, setSelected] = useState(0);
   const add = () => {
@@ -21,7 +29,12 @@ export default function ProductDetail({ product, images }: Props) {
   };
   const main = images[selected]?.url;
   return (
-    <section className="mx-auto max-w-4xl px-4 py-12">
+    <>
+      <Head>
+        <title>{product.meta_title || metaTitle}</title>
+        <meta name="description" content={product.meta_description || metaDesc} />
+      </Head>
+      <section className="mx-auto max-w-4xl px-4 py-12">
       <Link href="/produk" className="mb-6 inline-block text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
         ← Semua produk
       </Link>
@@ -61,11 +74,11 @@ export default function ProductDetail({ product, images }: Props) {
           {product.description}
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-zinc-200 pt-6 dark:border-zinc-800">
-          <span className="text-2xl font-extrabold text-brand-700 dark:text-brand-400">{rupiah(product.price)}</span>
+          <span className="text-2xl font-extrabold text-brand-700 dark:text-brand-300">{rupiah(product.price)}</span>
           <div className="flex items-center gap-3">
             <button
               onClick={add}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-600 px-4 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-950"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-600 px-4 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:text-brand-400 dark:hover:bg-brand-950 dark:text-brand-300"
             >
               {added ? <Check className="h-4 w-4" /> : <ShoppingCart className="h-4 w-4" />}
               {added ? "Ditambahkan" : "Keranjang"}
@@ -83,6 +96,7 @@ export default function ProductDetail({ product, images }: Props) {
         </div>
       </div>
     </section>
+    </>
   );
 }
 

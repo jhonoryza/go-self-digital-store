@@ -82,10 +82,10 @@ func (s *Server) routes() {
 		s.Page(w, r, "Public/Checkout", inertia.Props{})
 	})
 	m.HandleFunc("GET /privacy", func(w http.ResponseWriter, r *http.Request) {
-		s.Page(w, r, "Public/Policy", inertia.Props{"kind": "privacy"})
+		s.Page(w, r, "Public/Policy", inertia.Props{"kind": "privacy", "content": getSetting(s.DB, "content.privacy")})
 	})
 	m.HandleFunc("GET /ketentuan", func(w http.ResponseWriter, r *http.Request) {
-		s.Page(w, r, "Public/Policy", inertia.Props{"kind": "terms"})
+		s.Page(w, r, "Public/Policy", inertia.Props{"kind": "terms", "content": getSetting(s.DB, "content.terms")})
 	})
 
 	// health
@@ -139,6 +139,15 @@ func (s *Server) routes() {
 	m.Handle("POST /admin/produk/{id}/keys", s.guardAdmin(s.adminProductKeys))
 	m.Handle("POST /admin/produk/{id}/images", s.guardAdmin(s.adminProductImages))
 	m.Handle("POST /admin/produk/{id}/images/{image_id}/delete", s.guardAdmin(s.adminProductImageDelete))
+	m.Handle("GET /admin/orders/{order_no}", s.guardAdmin(s.adminOrderDetail))
+
+	// setting admin
+	m.Handle("GET /admin/setting", s.guardAdmin(s.adminSettingPage))
+	m.Handle("POST /admin/setting/smtp", s.guardAdmin(s.adminSettingSMTP))
+	m.Handle("POST /admin/setting/smtp/test", s.guardAdmin(s.adminSettingSMTPTest))
+	m.Handle("POST /admin/setting/brand", s.guardAdmin(s.adminSettingBrand))
+	m.Handle("POST /admin/setting/content", s.guardAdmin(s.adminSettingContent))
+	m.Handle("POST /admin/setting/seo", s.guardAdmin(s.adminSettingSEO))
 	m.Handle("POST /admin/produk/{id}/toggle", s.guardAdmin(s.adminProductToggle))
 	m.Handle("GET /admin/maillog", s.guardAdmin(s.adminMailLog))
 	m.Handle("GET /admin/tiket", s.guardAdmin(s.adminTickets))

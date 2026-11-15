@@ -5,7 +5,7 @@ import type { SharedProps } from "../types";
 
 // Layout konsol admin: header + tab nav.
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { auth_user, app_name, flash } = usePage<SharedProps>().props;
+  const { auth_user, app_name, brand_logo, flash } = usePage<SharedProps>().props;
   const { url } = usePage();
 
   const tabs = [
@@ -16,6 +16,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     ["/admin/tiket", "Tiket"],
     ["/admin/maillog", "Mail Log"],
     ["/admin/gateway", "Gateway"],
+    ["/admin/setting", "Setting"],
   ] as const;
 
   return (
@@ -34,7 +35,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
             <span className="rounded-md bg-zinc-900 px-2 py-1 text-xs font-bold text-white dark:bg-white dark:text-zinc-900">ADMIN</span>
-            <Link href="/" className="font-bold">{app_name ?? "Toko Digital"}</Link>
+            <Link href="/" className="flex items-center gap-2 font-bold">
+              {brand_logo && <img src={brand_logo} alt="" className="h-6 w-6 object-contain" />}
+              {app_name ?? "Toko Digital"}
+            </Link>
           </div>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-zinc-500">{auth_user?.email}</span>

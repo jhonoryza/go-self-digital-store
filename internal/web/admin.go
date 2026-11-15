@@ -136,6 +136,21 @@ func (s *Server) adminOrderResend(w http.ResponseWriter, r *http.Request, u auth
 	s.flashOK(w, r, "/admin/orders", "Email produk dikirim ulang.")
 }
 
+// adminOrderDetail GET /admin/orders/{order_no} — detail order lengkap
+// (rincian item, kunci lisensi, tautan unduh ber-token) seperti invoice user.
+func (s *Server) adminOrderDetail(w http.ResponseWriter, r *http.Request, u auth.User) {
+	o, ok := s.loadOrder(r.PathValue("order_no"))
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	s.Page(w, r, "Admin/OrderDetail", inertia.Props{
+		"order": o,
+		"token": s.orderToken(o.OrderNo),
+		"flash": flashFromQuery(r),
+	})
+}
+
 // ---- produk ----
 
 // productAdmin baris produk untuk konsol.
@@ -149,7 +164,7 @@ type productAdmin struct {
 }
 
 func (s *Server) adminProducts(w http.ResponseWriter, r *http.Request, u auth.User) {
-	rows, err := s.DB.Query(`SELECT id, slug, title, description, price, type, featured, active, file_path, file_name, ext_url,
+	rows, err := s.DB.Query(`SELECT id, slug, title, description, price, type, featured, active, file_path, file_name, ext_url, meta_title, meta_description,
 		(SELECT COUNT(*) FROM license_keys k WHERE k.product_id=p.id AND k.order_item_id IS NULL)
 		FROM products p ORDER BY id DESC`)
 	if err != nil {
@@ -160,13 +175,14 @@ func (s *Server) adminProducts(w http.ResponseWriter, r *http.Request, u auth.Us
 	var products []map[string]any
 	for rows.Next() {
 		var id int64
-		var slug, title, desc, typ, filePath, fileName, extURL string
+		var slug, title, desc, typ, filePath, fileName, extURL, metaTitle, metaDesc string
 		var price, featured, active, keyCount int
-		if rows.Scan(&id, &slug, &title, &desc, &price, &typ, &featured, &active, &filePath, &fileName, &extURL, &keyCount) == nil {
+		if rows.Scan(&id, &slug, &title, &desc, &price, &typ, &featured, &active, &filePath, &fileName, &extURL, &metaTitle, &metaDesc, &keyCount) == nil {
 			products = append(products, map[string]any{
 				"id": id, "slug": slug, "title": title, "description": desc, "price": price,
 				"type": typ, "featured": featured == 1, "active": active == 1,
 				"file_path": filePath, "file_name": fileName, "ext_url": extURL, "key_count": keyCount,
+				"meta_title": metaTitle, "meta_description": metaDesc,
 			})
 		}
 	}
@@ -194,6 +210,8 @@ func (s *Server) adminProductSave(w http.ResponseWriter, r *http.Request, u auth
 	featured := r.PostFormValue("featured") == "1"
 	active := r.PostFormValue("active") != "0"
 	extURL := strings.TrimSpace(r.PostFormValue("ext_url"))
+	metaTitle := strings.TrimSpace(r.PostFormValue("meta_title"))
+	metaDesc := strings.TrimSpace(r.PostFormValue("meta_description"))
 
 	errs := inertia.ValidationErrors{}
 	if slug == "" || !validEmail(slug+"@x.y") || strings.ContainsAny(slug, " ") {
@@ -245,9 +263,9 @@ func (s *Server) adminProductSave(w http.ResponseWriter, r *http.Request, u auth
 	}
 
 	if id == 0 {
-		_, err := s.DB.Exec(`INSERT INTO products (slug, title, description, price, type, featured, active, file_path, file_name, ext_url)
-			VALUES (?,?,?,?,?,?,?,?,?,?)`,
-			slug, title, description, price, ptype, boolInt(featured), boolInt(active), savedPath, savedName, extURL)
+		_, err := s.DB.Exec(`INSERT INTO products (slug, title, description, price, type, featured, active, file_path, file_name, ext_url, meta_title, meta_description)
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+			slug, title, description, price, ptype, boolInt(featured), boolInt(active), savedPath, savedName, extURL, metaTitle, metaDesc)
 		if err != nil {
 			if strings.Contains(err.Error(), "UNIQUE") {
 				s.renderWithErrors(w, r, "Admin/Products", nil, inertia.ValidationErrors{"slug": "slug sudah dipakai"})

@@ -4,6 +4,7 @@ import type { SharedProps } from "../../types";
 
 interface Props extends SharedProps {
   kind: "privacy" | "terms";
+  content?: string; // isi dari setting admin; kosong = default bawaan
 }
 
 const privacy = [
@@ -22,8 +23,20 @@ const terms = [
   ["Perubahan", "Ketentuan dapat diperbarui sewaktu-waktu; versi terbaru berlaku sejak dipublikasikan di halaman ini."],
 ];
 
-export default function Policy({ kind }: Props) {
-  const sections = kind === "privacy" ? privacy : terms;
+// konten admin: dipisah per baris kosong; format "Judul | Isi" per blok
+function parseContent(raw: string): string[][] {
+  return raw
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => {
+      const [head, ...rest] = block.split("\n");
+      return [head.replace(/^#\s*/, ""), rest.join(" ").trim() || head];
+    });
+}
+
+export default function Policy({ kind, content }: Props) {
+  const sections = content ? parseContent(content) : kind === "privacy" ? privacy : terms;
   return (
     <section className="mx-auto max-w-3xl px-4 py-12">
       <h1 className="mb-8 text-3xl font-bold">{kind === "privacy" ? "Kebijakan Privasi" : "Syarat & Ketentuan"}</h1>

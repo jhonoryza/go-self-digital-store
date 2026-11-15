@@ -34,7 +34,7 @@ export default function Cart({}: SharedProps) {
             <div key={i.id} className="flex items-center gap-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
               <ProductThumb product={i} className="h-14 w-14 shrink-0" iconClassName="h-5 w-5" />
               <div className="min-w-0 flex-1">
-                <Link href={`/produk/${i.slug}`} className="font-semibold hover:text-brand-700">{i.title}</Link>
+                <Link href={`/produk/${i.slug}`} className="font-semibold hover:text-brand-700 dark:text-brand-300">{i.title}</Link>
                 <p className="text-sm text-zinc-500">{rupiah(i.price)}</p>
               </div>
               <div className="flex items-center gap-1">
@@ -64,7 +64,7 @@ export default function Cart({}: SharedProps) {
           ))}
           <div className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
             <span className="text-lg font-semibold">Total</span>
-            <span className="text-2xl font-extrabold text-brand-700 dark:text-brand-400">{rupiah(cartTotal(items))}</span>
+            <span className="text-2xl font-extrabold text-brand-700 dark:text-brand-300">{rupiah(cartTotal(items))}</span>
           </div>
           <Link
             href="/checkout"

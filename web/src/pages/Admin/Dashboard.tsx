@@ -73,7 +73,7 @@ export default function AdminDashboard({ stats, recent }: Props) {
         </div>
         <p className="mt-2 text-xs text-zinc-500">
           Tindakan lanjutan (tandai lunas, kirim ulang) di tab{" "}
-          <Link href="/admin/orders" className="text-brand-600 hover:underline">Orders</Link>.
+          <Link href="/admin/orders" className="text-brand-600 hover:underline dark:text-brand-400">Orders</Link>.
         </p>
       </div>
     </div>

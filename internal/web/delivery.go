@@ -80,8 +80,8 @@ func (s *Server) onOrderPaid(orderNo string, r *http.Request) {
 		}
 		b.WriteString(`</div>`)
 		b.WriteString(`<p>Halaman order: ` + mail.Button(origin+"/pay/"+order.OrderNo+"?t="+dlToken, "Lihat order") + `</p>`)
-		body := mail.Style(s.Cfg.AppName, b.String())
-		s.Mail.Send(order.Email, "Produk Anda dari "+s.Cfg.AppName+" ("+order.OrderNo+")", body)
+		body := mail.Style(s.appName(), b.String())
+		s.Mail.Send(order.Email, "Produk Anda dari "+s.appName()+" ("+order.OrderNo+")", body)
 	}()
 }
 
@@ -154,7 +154,7 @@ func (s *Server) remindPending(r *http.Request) {
 	rows.Close()
 	for _, p := range list {
 		link := s.publicOrigin(r) + "/pay/" + p.no + "?t=" + p.token
-		body := mail.Style(s.Cfg.AppName,
+		body := mail.Style(s.appName(),
 			fmt.Sprintf(`<p>Halo,</p><p>Order <strong>%s</strong> (total <strong>%s</strong>) masih menunggu pembayaran.</p><p>%s</p><p style="color:#71717a;">Pengingat ini dikirim sekali; halaman order tetap bisa diakses dari tautan di email order awal.</p>`,
 				p.no, rupiah(p.total), mail.Button(link, "Selesaikan pembayaran")))
 		s.Mail.Send(p.email, "Selesaikan pembayaran order "+p.no, body)

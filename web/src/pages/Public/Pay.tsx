@@ -77,7 +77,7 @@ export default function Pay({ order, token, simulasi }: Props) {
             </li>
           ))}
           {order.discount > 0 && (
-            <li className="flex justify-between text-brand-700 dark:text-brand-400">
+            <li className="flex justify-between text-brand-700 dark:text-brand-300">
               <span>Diskon {order.coupon_code}</span>
               <span>−{rupiah(order.discount)}</span>
             </li>
@@ -85,7 +85,7 @@ export default function Pay({ order, token, simulasi }: Props) {
         </ul>
         <div className="mt-4 flex justify-between border-t border-zinc-200 pt-4 text-lg font-bold dark:border-zinc-800">
           <span>Total</span>
-          <span className="text-brand-700 dark:text-brand-400">{rupiah(order.total)}</span>
+          <span className="text-brand-700 dark:text-brand-300">{rupiah(order.total)}</span>
         </div>
       </div>
 
@@ -132,7 +132,7 @@ export default function Pay({ order, token, simulasi }: Props) {
                 </p>
               ))}
               {i.ext_url && (
-                <a href={i.ext_url} className="mt-1 inline-block text-sm font-semibold text-brand-700 hover:underline dark:text-brand-400">
+                <a href={i.ext_url} className="mt-1 inline-block text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
                   Buka produk →
                 </a>
               )}

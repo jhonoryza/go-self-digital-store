@@ -153,7 +153,7 @@ export default function Invoice({ order, token }: Props) {
                   </p>
                 ))}
                 {i.type === "link" && i.ext_url && (
-                  <a href={i.ext_url} className="text-brand-700 hover:underline dark:text-brand-400" target="_blank" rel="noreferrer">
+                  <a href={i.ext_url} className="text-brand-700 hover:underline dark:text-brand-300" target="_blank" rel="noreferrer">
                     Buka produk →
                   </a>
                 )}

@@ -3,6 +3,12 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* teks sekunder zinc-500 terlalu redup di tema gelap (3.7-4.1:1) —
+   naikkan ke zinc-400 (>=6:1) secara global */
+.dark .text-zinc-500 {
+  color: var(--color-zinc-400);
+}
+
 /* keluarga huruf dasar seluruh app */
 html {
   font-family: var(--font-sans);

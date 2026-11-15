@@ -17,6 +17,8 @@ interface Product {
   file_name: string;
   ext_url: string;
   key_count: number;
+  meta_title: string;
+  meta_description: string;
 }
 
 interface Props extends SharedProps {
@@ -131,6 +133,8 @@ function ProductForm({
     featured: product?.featured ? "1" : "0",
     active: product?.active ? "1" : "1",
     file: null as File | null,
+    meta_title: product?.meta_title ?? "",
+    meta_description: product?.meta_description ?? "",
   });
   const keysForm = useForm({ keys: "" });
   const fileRef = useRef<HTMLInputElement>(null);
@@ -212,6 +216,21 @@ function ProductForm({
               onChange={(e) => form.setData("active", e.target.checked ? "1" : "0")} />
             Aktif
           </label>
+        </div>
+        <div className="sm:col-span-2 rounded-lg border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
+          <p className="mb-2 text-xs font-semibold text-zinc-500">SEO (opsional - kosong = otomatis)</p>
+          <input
+            placeholder="Meta title"
+            value={form.data.meta_title}
+            onChange={(e) => form.setData("meta_title", e.target.value)}
+            className="mb-2 w-full rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+          />
+          <input
+            placeholder="Meta description"
+            value={form.data.meta_description}
+            onChange={(e) => form.setData("meta_description", e.target.value)}
+            className="w-full rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+          />
         </div>
         <div className="flex gap-2 sm:col-span-2">
           <button type="submit" disabled={form.processing}

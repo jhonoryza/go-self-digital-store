@@ -19,6 +19,8 @@ type productData struct {
 	Type        string `json:"type"`
 	Featured    bool   `json:"featured"`
 	ImageURL    string `json:"image_url,omitempty"` // gambar pertama (kartu katalog)
+	MetaTitle   string `json:"meta_title,omitempty"`
+	MetaDesc    string `json:"meta_description,omitempty"`
 }
 
 func scanProducts(rows *sql.Rows, err error) []productData {
@@ -46,6 +48,7 @@ func (s *Server) landing(w http.ResponseWriter, r *http.Request) {
 	s.attachFirstImages(r, featured)
 	s.Page(w, r, "Public/Landing", inertia.Props{
 		"featured": featured,
+		"seo":      s.seoFor("seo.home.title", "seo.home.description"),
 		"flash":    flashFromQuery(r),
 	})
 }
@@ -57,6 +60,7 @@ func (s *Server) productsList(w http.ResponseWriter, r *http.Request) {
 	s.attachFirstImages(r, products)
 	s.Page(w, r, "Public/Products", inertia.Props{
 		"products": products,
+		"seo":      s.seoFor("seo.products.title", "seo.products.description"),
 		"flash":    flashFromQuery(r),
 	})
 }
@@ -65,8 +69,8 @@ func (s *Server) productsList(w http.ResponseWriter, r *http.Request) {
 func (s *Server) productDetail(w http.ResponseWriter, r *http.Request) {
 	var p productData
 	err := s.DB.QueryRow(
-		`SELECT id, slug, title, description, price, type, featured FROM products WHERE slug=? AND active=1`, r.PathValue("slug")).
-		Scan(&p.ID, &p.Slug, &p.Title, &p.Description, &p.Price, &p.Type, &p.Featured)
+		`SELECT id, slug, title, description, price, type, featured, meta_title, meta_description FROM products WHERE slug=? AND active=1`, r.PathValue("slug")).
+		Scan(&p.ID, &p.Slug, &p.Title, &p.Description, &p.Price, &p.Type, &p.Featured, &p.MetaTitle, &p.MetaDesc)
 	if err == sql.ErrNoRows {
 		http.NotFound(w, r)
 		return
@@ -78,6 +82,7 @@ func (s *Server) productDetail(w http.ResponseWriter, r *http.Request) {
 	s.Page(w, r, "Public/ProductDetail", inertia.Props{
 		"product": p,
 		"images":  s.productImagesOf(r, p.ID),
+		"seo":     s.seoFor("seo.product.title", "seo.product.description"),
 		"flash":   flashFromQuery(r),
 	})
 }

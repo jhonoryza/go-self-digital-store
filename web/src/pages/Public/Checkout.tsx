@@ -58,7 +58,7 @@ export default function Checkout({ auth_user }: SharedProps) {
               {!auth_user && (
                 <p className="mt-3 text-xs text-zinc-500">
                   Sudah punya akun?{" "}
-                  <Link href="/login" className="text-brand-600 hover:underline">Masuk</Link>{" "}
+                  <Link href="/login" className="text-brand-600 hover:underline dark:text-brand-400">Masuk</Link>{" "}
                   agar pesanan tampil di dashboard. Checkout tanpa akun tetap bisa.
                 </p>
               )}
@@ -92,7 +92,7 @@ export default function Checkout({ auth_user }: SharedProps) {
             </ul>
             <div className="mb-6 flex justify-between border-t border-zinc-200 pt-4 text-lg font-bold dark:border-zinc-800">
               <span>Total</span>
-              <span className="text-brand-700 dark:text-brand-400">{rupiah(cartTotal(items))}</span>
+              <span className="text-brand-700 dark:text-brand-300">{rupiah(cartTotal(items))}</span>
             </div>
             <button
               type="submit"

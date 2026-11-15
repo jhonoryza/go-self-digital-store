@@ -34,8 +34,16 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
 - `src/pages/Admin/Products.tsx` — `ImageManager` unggah/hapus gambar (maks 5,
   jpg/png/webp, 2 MB) via multipart `images` ke `/admin/produk/{id}/images`;
   unggah butuh produk sudah tersimpan (ada id).
-- `src/pages/{Public,Auth,Account,Admin}` — halaman; nama komponen = path
+- `src/pages/{Public,Auth,Account,Admin,Dev}` — halaman; nama komponen = path
   komponen Inertia dari backend (mis. `Public/Landing`).
+- `src/pages/Admin/Settings.tsx` — setting runtime (SMTP via Mailer.Reconfigure,
+  brand nama+logo di R2, konten privasi/ketentuan, SEO per halaman); semua
+  tersimpan di tabel settings. `Admin/OrderDetail.tsx` — detail order versi
+  admin (kunci lisensi + uji tautan unduh + aksi lunas/resend).
+- **SEO/meta**: gunakan `<Head>` dari @inertiajs/react. Sumber: settings
+  `seo.*` (halaman setting admin) untuk beranda/katalog; produk punya
+  meta_title/meta_description sendiri (form admin, kolom migrasi 0003);
+  Policy memakai konten settings bila terisi (fallback: array bawaan).
 - `public/_redirects` (`/* /index.html 200`) + `public/_headers` (`/assets/*`
   immutable) — wajib untuk CF Pages.
 
