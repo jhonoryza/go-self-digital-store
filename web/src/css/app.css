@@ -194,3 +194,79 @@ html.dark[data-theme="neon"] .shadow-lg {
   --color-brand-900: #1e3a8a;
   --color-brand-950: #172554;
 }
+
+/* Coss UI: indigo Cal.com (coss.com/ui), skala keluarga Radix Iris */
+:root[data-theme="coss"] {
+  --color-brand-50: #f1f2fb;
+  --color-brand-100: #e5e6f9;
+  --color-brand-200: #d3d5f5;
+  --color-brand-300: #bdbff0;
+  --color-brand-400: #a2a5ea;
+  --color-brand-500: #6b6edc;
+  --color-brand-600: #3e63dd;
+  --color-brand-700: #3a5bc7;
+  --color-brand-800: #3451b2;
+  --color-brand-900: #2d3990;
+  --color-brand-950: #1d2464;
+}
+
+/* Align UI: biru cerah AlignUI (alignui.com, default primary blue) */
+:root[data-theme="align"] {
+  --color-brand-50: #eff8ff;
+  --color-brand-100: #d1e9ff;
+  --color-brand-200: #b2ddff;
+  --color-brand-300: #84caff;
+  --color-brand-400: #53b1fd;
+  --color-brand-500: #2e90fa;
+  --color-brand-600: #1570ef;
+  --color-brand-700: #175cd3;
+  --color-brand-800: #1849a9;
+  --color-brand-900: #194185;
+  --color-brand-950: #102a56;
+}
+
+/* daisyUI: indigo vivid tema light daisyUI 5, oklch(55% 0.3 264) */
+:root[data-theme="daisy"] {
+  --color-brand-50: #dff1ff;
+  --color-brand-100: #bcdeff;
+  --color-brand-200: #8cc4ff;
+  --color-brand-300: #5aa1ff;
+  --color-brand-400: #2b78ff;
+  --color-brand-500: #004cff;
+  --color-brand-600: #0038f7;
+  --color-brand-700: #0029cb;
+  --color-brand-800: #001f9c;
+  --color-brand-900: #001372;
+  --color-brand-950: #000041;
+}
+
+/* HeroUI: biru default HeroUI (eks NextUI), #006FEE di 500 */
+:root[data-theme="hero"] {
+  --color-brand-50: #e6f1fd;
+  --color-brand-100: #cce2fc;
+  --color-brand-200: #99c5f8;
+  --color-brand-300: #6babf5;
+  --color-brand-400: #338cf1;
+  --color-brand-500: #006fee;
+  --color-brand-600: #005bc4;
+  --color-brand-700: #004493;
+  --color-brand-800: #002e62;
+  --color-brand-900: #001731;
+  --color-brand-950: #000b18;
+}
+
+/* Ant Design: Daybreak Blue #1677FF di 500, 600 digelapkan (blue-7 antd)
+   agar teks putih tombol >= 4.5:1 (#1677ff hanya 4.10) */
+:root[data-theme="ant"] {
+  --color-brand-50: #e6f4ff;
+  --color-brand-100: #bae0ff;
+  --color-brand-200: #91caff;
+  --color-brand-300: #69b1ff;
+  --color-brand-400: #4096ff;
+  --color-brand-500: #1677ff;
+  --color-brand-600: #0958d9;
+  --color-brand-700: #003eb3;
+  --color-brand-800: #003a8c;
+  --color-brand-900: #002766;
+  --color-brand-950: #000c4b;
+}

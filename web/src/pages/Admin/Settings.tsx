@@ -21,6 +21,11 @@ const THEMES = [
   { id: "pastel", label: "Pastel Lembut", desc: "Violet kalem, sudut ekstra membulat", swatch: "#7c3aed", bg: "#f5f3ff" },
   { id: "terminal", label: "Retro Terminal", desc: "Hijau fosfor layar CRT", swatch: "#059669", bg: "#ecfdf5" },
   { id: "ocean", label: "Samudra", desc: "Biru klasik aplikasi SaaS", swatch: "#2563eb", bg: "#eff6ff" },
+  { id: "coss", label: "Coss UI", desc: "Indigo Cal.com - tenang dan aksesibel", swatch: "#3e63dd", bg: "#f1f2fb" },
+  { id: "align", label: "Align UI", desc: "Biru cerah AlignUI (primary default)", swatch: "#1570ef", bg: "#eff8ff" },
+  { id: "daisy", label: "daisyUI", desc: "Indigo vivid tema light daisyUI 5", swatch: "#0038f7", bg: "#dff1ff" },
+  { id: "hero", label: "HeroUI", desc: "Biru HeroUI (dahulu NextUI)", swatch: "#005bc4", bg: "#e6f1fd" },
+  { id: "ant", label: "Ant Design", desc: "Daybreak Blue khas antd", swatch: "#0958d9", bg: "#e6f4ff" },
 ] as const;
 
 // Halaman Setting: SMTP runtime, brand (nama + logo), konten kebijakan,

@@ -344,6 +344,11 @@ var themeHex = map[string]string{
 	"pastel":    "#7c3aed",
 	"terminal":  "#059669",
 	"ocean":     "#2563eb",
+	"coss":      "#3e63dd",
+	"align":     "#1570ef",
+	"daisy":     "#0038f7",
+	"hero":      "#005bc4",
+	"ant":       "#0958d9",
 }
 
 // manifestWebmanifest webmanifest dinamis: nama toko dari setting, warna

@@ -54,6 +54,7 @@ func (s *Server) brandLogoURL(r *http.Request) string {
 // storeThemes daftar tema tampilan toko yang valid (kosong = bawaan).
 var storeThemes = map[string]bool{
 	"": true, "brutalism": true, "neon": true, "pastel": true, "terminal": true, "ocean": true,
+	"coss": true, "align": true, "daisy": true, "hero": true, "ant": true,
 }
 
 // storeTheme baca tema toko dari settings; nilai di luar daftar = bawaan.
