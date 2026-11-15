@@ -691,3 +691,29 @@ func TestE2EMultipleDownloadLinks(t *testing.T) {
 		}
 	}
 }
+
+// ---- halaman checkout (GET) + gerbang verified ----
+
+func TestE2ECheckoutPage(t *testing.T) {
+	_, ts, d := testServer(t)
+	seedUser(t, d, "shopper@uji.id", "rahasia123", "user")
+
+	// guest → ditolak ke /login
+	if res := doGetRes(t, newClient(), ts.URL+"/checkout", nil); res.StatusCode != http.StatusFound {
+		t.Fatalf("checkout guest = %d, mau 302", res.StatusCode)
+	}
+
+	// user terdaftar tapi belum verifikasi email → gerbang 409 /verify-email
+	unv := newClient()
+	doPost(t, unv, ts.URL+"/register", `{"name":"Belum Verif","email":"unverif@uji.id","password":"rahasia123"}`)
+	res := doGetRes(t, unv, ts.URL+"/checkout", map[string]string{"X-Inertia": "true"})
+	if res.StatusCode != http.StatusConflict || res.Header.Get("X-Inertia-Location") != "/verify-email" {
+		t.Fatalf("checkout belum verif = %d %s, mau 409 /verify-email", res.StatusCode, res.Header.Get("X-Inertia-Location"))
+	}
+
+	// user terverifikasi → halaman keranjang dirender
+	page := doPage(t, loginCookie(t, ts, "shopper@uji.id", "rahasia123"), ts.URL+"/checkout")
+	if page["component"] != "Public/Checkout" {
+		t.Errorf("component = %v, mau Public/Checkout", page["component"])
+	}
+}

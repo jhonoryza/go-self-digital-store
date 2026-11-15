@@ -626,3 +626,76 @@ func TestE2EStoreTheme(t *testing.T) {
 		t.Error("shell masih memuat tema lama")
 	}
 }
+
+// ---- SMTP runtime + brand (nama & logo) ----
+
+func TestE2EAdminSmtpAndBrand(t *testing.T) {
+	s, ts, d := testServer(t)
+	s.Images = newStubStore() // logo diunggah ke penyimpanan stub
+	seedUser(t, d, "setting@uji.id", "adminpass1", "admin")
+	admin := loginCookie(t, ts, "setting@uji.id", "adminpass1")
+	acsrf := csrfOf(t, admin, ts, "/admin")
+
+	// test-send tanpa konfigurasi → ditolak dengan flash err
+	res := doPostCSRF(t, admin, ts.URL+"/admin/setting/smtp/test", `{}`, acsrf)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "err=") {
+		t.Fatalf("uji SMTP tanpa config = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+
+	// simpan SMTP runtime → settings tersimpan (Reconfigure dipanggil handler)
+	res = doPostCSRF(t, admin, ts.URL+"/admin/setting/smtp",
+		`{"host":"127.0.0.1","port":"1","user":"uji","pass":"rahasia","from":"dev@toko.local"}`, acsrf)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "ok=") {
+		t.Fatalf("simpan SMTP = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	if got := getSetting(d, "smtp.host"); got != "127.0.0.1" || getSetting(d, "smtp.port") != "1" {
+		t.Errorf("smtp tersimpan = %q:%q", getSetting(d, "smtp.host"), getSetting(d, "smtp.port"))
+	}
+
+	// test-send ke host mati (port 1) → gagal + tercatat error di mail_log
+	res = doPostCSRF(t, admin, ts.URL+"/admin/setting/smtp/test", `{}`, acsrf)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "err=") {
+		t.Errorf("uji SMTP mati = %d %s, mau flash err", res.StatusCode, res.Header.Get("Location"))
+	}
+	var nerr int
+	d.QueryRow(`SELECT COUNT(*) FROM mail_log WHERE status='error' AND to_email='setting@uji.id'`).Scan(&nerr)
+	if nerr < 1 {
+		t.Errorf("mail_log error = %d, mau >= 1", nerr)
+	}
+
+	// brand: nama saja (tanpa berkas)
+	res = doPostCSRF(t, admin, ts.URL+"/admin/setting/brand", `{"name":"Toko Baru Uji"}`, acsrf)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "ok=") {
+		t.Fatalf("brand nama = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	if got := getSetting(d, "brand.name"); got != "Toko Baru Uji" {
+		t.Errorf("brand.name = %q", got)
+	}
+
+	// brand: unggah logo PNG → key tersimpan + objek masuk stub store
+	res = multipartPost(t, admin, ts.URL+"/admin/setting/brand", acsrf,
+		map[string]string{"name": "Toko Logo Uji"}, "logo", "logo.png", string(pngBytes))
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "ok=") {
+		t.Fatalf("brand logo = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	key := getSetting(d, "brand.logo_key")
+	if !strings.Contains(key, "brand/logo.png") {
+		t.Fatalf("brand.logo_key = %q, mau berakhiran brand/logo.png", key)
+	}
+	if len(s.Images.(*stubStore).objects[key]) == 0 {
+		t.Error("logo tidak masuk penyimpanan")
+	}
+
+	// hapus logo → key dikosongkan + objek dibuang
+	res = multipartPost(t, admin, ts.URL+"/admin/setting/brand", acsrf,
+		map[string]string{"name": "Toko Logo Uji", "remove_logo": "1"}, "", "", "")
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "ok=") {
+		t.Fatalf("brand hapus logo = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	if got := getSetting(d, "brand.logo_key"); got != "" {
+		t.Errorf("brand.logo_key pasca hapus = %q, mau kosong", got)
+	}
+	if _, ok := s.Images.(*stubStore).objects[key]; ok {
+		t.Error("objek logo lama tidak dihapus dari penyimpanan")
+	}
+}

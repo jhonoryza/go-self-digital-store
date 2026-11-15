@@ -552,3 +552,45 @@ func TestE2EPasswordlessLogin(t *testing.T) {
 		t.Errorf("brute force harus menghapus token: %v", errs)
 	}
 }
+
+// ---- dev login-as: jalur sukses + penolakan ----
+
+func TestE2EDevLoginAs(t *testing.T) {
+	_, ts, d := testServer(t, func(c *config.Config) { c.DevLogin = true })
+	aid := seedUser(t, d, "boss-dev@uji.id", "adminpass1", "admin")
+	uid := seedUser(t, d, "plain-dev@uji.id", "rahasia123", "user")
+
+	// masuk sebagai user biasa → landas /dashboard, sesi aktif
+	client := newClient()
+	res := doPost(t, client, ts.URL+"/dev/login", fmt.Sprintf(`{"user_id":%d}`, uid))
+	if loc := res.Header.Get("Location"); res.StatusCode != http.StatusFound || !strings.HasPrefix(loc, "/dashboard") {
+		t.Fatalf("dev login user = %d %s, mau 302 /dashboard", res.StatusCode, loc)
+	}
+	if res := doGetRes(t, client, ts.URL+"/dashboard", nil); res.StatusCode != http.StatusOK {
+		t.Errorf("dashboard sesi dev = %d, mau 200", res.StatusCode)
+	}
+
+	// masuk sebagai admin → landas /admin dan guardAdmin lolos
+	adminC := newClient()
+	res = doPost(t, adminC, ts.URL+"/dev/login", fmt.Sprintf(`{"user_id":%d}`, aid))
+	if loc := res.Header.Get("Location"); res.StatusCode != http.StatusFound || !strings.HasPrefix(loc, "/admin") {
+		t.Fatalf("dev login admin = %d %s, mau 302 /admin", res.StatusCode, loc)
+	}
+	if res := doGetRes(t, adminC, ts.URL+"/admin", nil); res.StatusCode != http.StatusOK {
+		t.Errorf("admin sesi dev = %d, mau 200", res.StatusCode)
+	}
+
+	// user_id bukan angka & tak dikenal → flash err, tanpa sesi
+	bad := newClient()
+	res = doPost(t, bad, ts.URL+"/dev/login", `{"user_id":"ngawur"}`)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "err=") {
+		t.Errorf("dev login ngawur = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	res = doPost(t, bad, ts.URL+"/dev/login", `{"user_id":99999}`)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "err=") {
+		t.Errorf("dev login tak dikenal = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	if res := doGetRes(t, bad, ts.URL+"/dashboard", nil); res.StatusCode == http.StatusOK {
+		t.Error("penolakan dev login tidak boleh membuat sesi")
+	}
+}
