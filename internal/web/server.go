@@ -104,6 +104,13 @@ func (s *Server) routes() {
 		m.HandleFunc("POST /dev/login", s.devLoginAs)
 	}
 
+	// login tanpa password (tautan + kode email)
+	m.Handle("GET /login/link", s.limited("magic", http.HandlerFunc(s.loginLinkPage)))
+	m.Handle("POST /login/link", s.limited("magic", http.HandlerFunc(s.loginLinkSend)))
+	m.HandleFunc("GET /login/link/check", s.loginLinkCheck)
+	m.HandleFunc("GET /login/link/{token}", s.loginLinkConsume)
+	m.Handle("POST /login/link/verify", s.limited("magic", http.HandlerFunc(s.loginLinkVerify)))
+
 	// verifikasi email (login sudah, belum wajib verified)
 	m.Handle("GET /verify-email", s.guardAuth(s.verifyEmailPage))
 	m.Handle("POST /verify-email", s.guardAuth(s.verifyEmailVerify))

@@ -57,6 +57,11 @@ export default function Login() {
           Daftar
         </Link>
       </p>
+      <p className="mt-2 text-center text-sm">
+        <Link href="/login/link" className="text-zinc-500 underline decoration-dashed hover:text-zinc-800 dark:hover:text-zinc-200">
+          Masuk tanpa password (tautan email)
+        </Link>
+      </p>
     </AuthLayout>
   );
 }

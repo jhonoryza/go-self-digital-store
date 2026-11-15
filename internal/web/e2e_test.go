@@ -1641,3 +1641,86 @@ func TestE2EEmailVerification(t *testing.T) {
 		t.Errorf("otp tersisa = %d, mau 0", otps)
 	}
 }
+
+// ---- login tanpa password: magic link + kode OTP email ----
+
+func TestE2EPasswordlessLogin(t *testing.T) {
+	s, ts, d := testServer(t)
+	seedUser(t, d, "passless@uji.id", "rahasia123", "user")
+
+	// minta tautan+kode → generik (anti enumerasi), token & kode tersimpan
+	res := doPost(t, newClient(), ts.URL+"/login/link", `{"email":"passless@uji.id"}`)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "sent=passless") {
+		t.Fatalf("minta tautan = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	var count int
+	d.QueryRow(`SELECT COUNT(*) FROM login_tokens WHERE email='passless@uji.id'`).Scan(&count)
+	if count != 1 {
+		t.Fatalf("token tersimpan = %d, mau 1", count)
+	}
+
+	// email tak terdaftar → tetap generik, tidak ada token tersimpan
+	res = doPost(t, newClient(), ts.URL+"/login/link", `{"email":"hantu@uji.id"}`)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "sent=hantu") {
+		t.Errorf("email hantu = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	d.QueryRow(`SELECT COUNT(*) FROM login_tokens WHERE email='hantu@uji.id'`).Scan(&count)
+	if count != 0 {
+		t.Error("email tak terdaftar tidak boleh membuat token")
+	}
+
+	// METODE 1: magic link → sesi terbentuk, email otomatis verified, token terpakai
+	linkToken, _, err := s.createLoginTokens("passless@uji.id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	linkClient := newClient()
+	res = doGetRes(t, linkClient, ts.URL+"/login/link/"+linkToken, nil)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "/dashboard") {
+		t.Fatalf("konsumsi tautan = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	page := doPage(t, linkClient, ts.URL+"/dashboard")
+	if _, ok := prop(t, page)["stats"]; !ok {
+		t.Error("dashboard tidak terbuka via magic link")
+	}
+	var verified sql.NullString
+	d.QueryRow(`SELECT email_verified_at FROM users WHERE email='passless@uji.id'`).Scan(&verified)
+	if !verified.Valid {
+		t.Error("magic link harus otomatis memverifikasi email")
+	}
+	// token sekali pakai
+	res = doGetRes(t, newClient(), ts.URL+"/login/link/"+linkToken, nil)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "/login") {
+		t.Errorf("tautan bekas = %d %s, mau ditolak", res.StatusCode, res.Header.Get("Location"))
+	}
+
+	// METODE 2: kode OTP → sesi terbentuk
+	_, code, err := s.createLoginTokens("passless@uji.id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	codeClient := newClient()
+	res = doPost(t, codeClient, ts.URL+"/login/link/verify",
+		fmt.Sprintf(`{"email":"passless@uji.id","code":%q}`, code))
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "/dashboard") {
+		t.Fatalf("verifikasi kode = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+	page = doPage(t, codeClient, ts.URL+"/dashboard")
+	if _, ok := prop(t, page)["stats"]; !ok {
+		t.Error("dashboard tidak terbuka via kode")
+	}
+
+	// brute force: 5 kode salah → token dihapus
+	limiterResetForTest()
+	_, code2, _ := s.createLoginTokens("passless@uji.id")
+	for i := 0; i < 5; i++ {
+		doPost(t, newClient(), ts.URL+"/login/link/verify",
+			fmt.Sprintf(`{"email":"passless@uji.id","code":"00000%d"}`, i))
+	}
+	res = doPost(t, newClient(), ts.URL+"/login/link/verify",
+		fmt.Sprintf(`{"email":"passless@uji.id","code":%q}`, code2))
+	errs := postErrors(t, res)
+	if !errHas(errs, "code") || !strings.Contains(fmt.Sprint(errs["code"]), "minta kode baru") {
+		t.Errorf("brute force harus menghapus token: %v", errs)
+	}
+}

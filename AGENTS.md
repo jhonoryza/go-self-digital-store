@@ -4,8 +4,9 @@ Toko online single-tenant untuk jualan produk digital. Pembayaran via library
 `github.com/jhonoryza/paygateway` (12 gateway + simulasi); setelah lunas, produk
 terkirim otomatis ke email pembeli (unduhan ber-token / kunci lisensi / tautan).
 Registrasi memicu OTP 6 digit ke email (tabel `email_otps`, sha256, 15 menit);
-dashboard & checkout wajib email terverifikasi (`guardVerified`) — lihat
-internal/web/verify.go.
+dashboard & checkout wajib email terverifikasi (`guardVerified`). Login tanpa
+password: magic link + kode OTP dari email (tabel `login_tokens`) — lihat
+internal/web/verify.go & login_link.go.
 
 ## Stack & arsitektur
 

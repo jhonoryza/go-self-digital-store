@@ -73,6 +73,7 @@ var ipLimits = map[string]int{
 	"reset":    5,
 	"checkout": 30,
 	"download": 30,
+	"magic":    20,
 	"global":   600,
 }
 

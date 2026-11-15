@@ -32,6 +32,7 @@ request asing ditolak sebelum di-buffer.
 | `images.go` | gambar produk: upload/hapus ke R2 (minio-go, prefix per-app di bucket `webapp`), proxy `GET /images/{key...}` hanya untuk prefix app; `imageStore` interface (stub di test) |
 | `settings.go` | setting runtime admin: SMTP (Mailer.Reconfigure + TestSend), brand nama/logo (R2), konten kebijakan, SEO; tersimpan di tabel settings; `s.appName()` = brand.name menimpa config env |
 | `verify.go` | verifikasi email: OTP 6 digit (sha256 di `email_otps`, TTL 15 menit, resend cooldown 60s), `guardVerified` membungkus dashboard menus + checkout (wajib login terverifikasi) |
+| `login_link.go` | login tanpa password: email memuat magic link + kode OTP (tabel `login_tokens`, sha256, TTL 15 menit, sekali pakai, maks 5 percobaan); keduanya otomatis memverifikasi email; respons selalu generik (anti enumerasi) |
 
 ## Local Contracts
 
