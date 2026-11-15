@@ -40,12 +40,29 @@ func (s *Server) updateProfile(w http.ResponseWriter, r *http.Request, u auth.Us
 		s.renderWithErrors(w, r, "Account/Profile", nil, errs)
 		return
 	}
-	if _, err := s.DB.Exec(`UPDATE users SET name=?, email=? WHERE id=?`, name, email, u.ID); err != nil {
+	// ganti email = temuan audit (email rebind): email adalah kunci ownership
+	// order — wajib verifikasi ulang alamat baru; ganti nama saja tidak
+	// menyentuh status verified.
+	if email == strings.ToLower(u.Email) {
+		if _, err := s.DB.Exec(`UPDATE users SET name=? WHERE id=?`, name, u.ID); err != nil {
+			jsonError(w, http.StatusInternalServerError, "kesalahan server")
+			return
+		}
+		audit(s.DB, "profil.update", u.Email, "")
+		s.flashOK(w, r, "/profil", "Profil diperbarui.")
+		return
+	}
+	if _, err := s.DB.Exec(`UPDATE users SET name=?, email=?, email_verified_at=NULL WHERE id=?`, name, email, u.ID); err != nil {
 		jsonError(w, http.StatusInternalServerError, "kesalahan server")
 		return
 	}
 	audit(s.DB, "profil.update", u.Email, email)
-	s.flashOK(w, r, "/profil", "Profil diperbarui.")
+	baru := u
+	baru.Email = email
+	if _, err := s.sendEmailOTP(baru); err != nil {
+		logErr("kirim OTP email baru %s: %v", email, err)
+	}
+	s.flashOK(w, r, "/verify-email", "Profil diperbarui - verifikasi email baru Anda.")
 }
 
 func (s *Server) changePassword(w http.ResponseWriter, r *http.Request, u auth.User) {

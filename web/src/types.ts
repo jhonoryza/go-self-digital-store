@@ -18,13 +18,6 @@ export interface SharedProps extends PageProps {
   dev_login?: boolean; // pintu dev /dev/login aktif (STORE_DEV_LOGIN=1)
 }
 
-export interface DevAccount {
-  id: number;
-  email: string;
-  name: string;
-  role: string;
-}
-
 export interface Product {
   id: number;
   slug: string;

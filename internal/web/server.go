@@ -107,8 +107,8 @@ func (s *Server) routes() {
 
 	// dev: masuk sebagai akun mana pun (hanya bila STORE_DEV_LOGIN=1)
 	if s.Cfg.DevLogin {
-		m.HandleFunc("GET /dev/login", s.devLoginPage)
-		m.HandleFunc("POST /dev/login", s.devLoginAs)
+		m.Handle("GET /dev/login", s.limited("dev", http.HandlerFunc(s.devLoginPage)))
+		m.Handle("POST /dev/login", s.limited("dev", http.HandlerFunc(s.devLoginAs)))
 	}
 
 	// login tanpa password (tautan + kode email)
@@ -120,7 +120,7 @@ func (s *Server) routes() {
 
 	// verifikasi email (login sudah, belum wajib verified)
 	m.Handle("GET /verify-email", s.guardAuth(s.verifyEmailPage))
-	m.Handle("POST /verify-email", s.guardAuth(s.verifyEmailVerify))
+	m.Handle("POST /verify-email", s.limited("verify", s.guardAuth(s.verifyEmailVerify)))
 	m.Handle("POST /verify-email/resend", s.guardAuth(s.verifyEmailResend))
 
 	// akun (Guard user + wajib email terverifikasi)

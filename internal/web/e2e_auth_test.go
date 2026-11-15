@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jhonoryza/go-self-digital-store/internal/auth"
+	"github.com/jhonoryza/go-self-digital-store/internal/config"
 )
 
 // ---- auth: validasi + guard sesi + logout ----
@@ -114,7 +115,7 @@ func TestE2EAuthValidationAndSession(t *testing.T) {
 // ---- profil + ganti password ----
 
 func TestE2EProfileAndPassword(t *testing.T) {
-	_, ts, d := testServer(t)
+	s, ts, d := testServer(t)
 	seedUser(t, d, "taken@uji.id", "password999", "user")
 	uid := seedUser(t, d, "budi@uji.id", "rahasia123", "user")
 	client := loginCookie(t, ts, "budi@uji.id", "rahasia123")
@@ -150,6 +151,14 @@ func TestE2EProfileAndPassword(t *testing.T) {
 	if audits != 1 {
 		t.Errorf("audit profil.update = %d", audits)
 	}
+
+	// email diganti → verified direset (temuan audit email-rebind); verifikasi
+	// email baru dulu sebelum lanjut (gerbang guardVerified)
+	res = doGetRes(t, client, ts.URL+"/dashboard", map[string]string{"X-Inertia": "true"})
+	if res.StatusCode != http.StatusConflict || res.Header.Get("X-Inertia-Location") != "/verify-email" {
+		t.Errorf("dashboard pasca-ganti email = %d %s, mau 409 /verify-email", res.StatusCode, res.Header.Get("X-Inertia-Location"))
+	}
+	verifyUser(t, s, d, client, ts, "budi2@uji.id")
 
 	// ganti password: current salah
 	res = doPostCSRF(t, client, ts.URL+"/profil/password",
@@ -301,6 +310,90 @@ func TestE2ESecurityMiddleware(t *testing.T) {
 			t.Fatalf("login via XFF = %d", r2.StatusCode)
 		}
 	}
+}
+
+// ---- regresi perbaikan audit: email-rebind, otp-cap, dev-login, reset hash ----
+
+func TestE2ESecurityFixes(t *testing.T) {
+	s, ts, d := testServer(t, func(c *config.Config) { c.DevLogin = true })
+	seedUser(t, d, "boss@uji.id", "adminpass1", "admin")
+
+	// ---- FIX email rebind: ganti email profil → verified direset + OTP baru ----
+	client := newClient()
+	doPost(t, client, ts.URL+"/register", `{"name":"Rebind","email":"rebind@uji.id","password":"rahasia123"}`)
+	verifyUser(t, s, d, client, ts, "rebind@uji.id")
+	// pastikan verified: dashboard 200
+	res := doGetRes(t, client, ts.URL+"/dashboard", nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("dashboard pra-rebind = %d, mau 200", res.StatusCode)
+	}
+	// ganti email ke alamat lain
+	csrf := csrfOf(t, client, ts, "/profil")
+	res = doPostCSRF(t, client, ts.URL+"/profil",
+		`{"name":"Rebind","email":"emailbaru@uji.id"}`, csrf)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "/verify-email") {
+		t.Fatalf("ganti email = %d %s, mau redirect /verify-email", res.StatusCode, res.Header.Get("Location"))
+	}
+	// email_verified_at direset → dashboard terkunci (XHR 409 verify-email)
+	res = doGetRes(t, client, ts.URL+"/dashboard", map[string]string{"X-Inertia": "true"})
+	if res.StatusCode != http.StatusConflict || res.Header.Get("X-Inertia-Location") != "/verify-email" {
+		t.Errorf("dashboard pasca-ganti email = %d %s, mau 409 /verify-email", res.StatusCode, res.Header.Get("X-Inertia-Location"))
+	}
+	// OTP baru terkirim ke email baru & verifikasi berhasil (kepemilikan dibuktikan)
+	verifyUser(t, s, d, client, ts, "emailbaru@uji.id")
+	res = doGetRes(t, client, ts.URL+"/dashboard", nil)
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("dashboard pasca-verifikasi = %d, mau 200", res.StatusCode)
+	}
+
+	// ---- FIX OTP attempt cap: 5 kode salah → OTP dihapus, kode benar pun ditolak ----
+	// (user rebind sudah verified — handler langsung redirect; pakai akun baru)
+	capC := newClient()
+	doPost(t, capC, ts.URL+"/register", `{"name":"Cap","email":"cap@uji.id","password":"rahasia123"}`)
+	var cid int64
+	d.QueryRow(`SELECT id FROM users WHERE email='cap@uji.id'`).Scan(&cid)
+	otp, _ := s.sendEmailOTP(auth.User{ID: cid, Email: "cap@uji.id"})
+	cucsr := csrfOf(t, capC, ts, "/verify-email")
+	for i := 0; i < 5; i++ {
+		doPostCSRF(t, capC, ts.URL+"/verify-email", `{"code":"999999"}`, cucsr)
+	}
+	res = doPostCSRF(t, capC, ts.URL+"/verify-email", fmt.Sprintf(`{"code":%q}`, otp), cucsr)
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("kode benar setelah cap = %d, mau 200 (ditolak)", res.StatusCode)
+	}
+	var otpRow int
+	d.QueryRow(`SELECT COUNT(*) FROM email_otps WHERE user_id=?`, cid).Scan(&otpRow)
+	if otpRow != 0 {
+		t.Errorf("OTP tidak dihapus setelah cap (rows=%d)", otpRow)
+	}
+
+	// ---- FIX dev-login: GET /dev/login tanpa flag sudah 404 di server_test;
+	// di sini (flag on) pastikan TIDAK mengenumerasi akun ----
+	devPage := doGetRes(t, newClient(), ts.URL+"/dev/login", nil)
+	dp, _ := io.ReadAll(devPage.Body)
+	if strings.Contains(string(dp), "boss@uji.id") || strings.Contains(string(dp), "rebind@uji.id") {
+		t.Error("halaman /dev/login masih mengenumerasi email akun")
+	}
+	// rate limit dev: 21 POST → 429
+	limiterResetForTest()
+	for i := 0; i < 21; i++ {
+		doPost(t, &http.Client{}, ts.URL+"/dev/login", fmt.Sprintf(`{"user_id":%d}`, i))
+	}
+	if gres := doGetRes(t, newClient(), ts.URL+"/dev/login", nil); gres.StatusCode != http.StatusTooManyRequests {
+		t.Errorf("dev login melewati kuota 21/menit")
+	}
+
+	// ---- FIX reset token: plaintext TIDAK tersimpan di DB ----
+	doPost(t, &http.Client{}, ts.URL+"/lupa-password", `{"email":"emailbaru@uji.id"}`)
+	var stored string
+	if err := d.QueryRow(`SELECT token FROM password_resets WHERE email='emailbaru@uji.id'`).Scan(&stored); err != nil {
+		t.Fatal("token reset tidak dibuat:", err)
+	}
+	if len(stored) != 64 || stored == "" {
+		t.Errorf("token reset = %q, mau hex sha256 64 char", stored)
+	}
+	// sha256 plaintext dari email tidak bisa ditebak test — verifikasi bentuk;
+	// perilaku lookup-by-hash dibuktikan TestPasswordReset
 }
 
 // ---- verifikasi email: OTP saat daftar, gerbang dashboard & checkout ----

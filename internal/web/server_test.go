@@ -29,7 +29,7 @@ import (
 
 // ---- bootstrap ----
 
-func testServer(t *testing.T) (*Server, *httptest.Server, *sql.DB) {
+func testServer(t *testing.T, overrides ...func(*config.Config)) (*Server, *httptest.Server, *sql.DB) {
 	t.Helper()
 	dir := t.TempDir()
 	d, err := db.Open(dir)
@@ -42,6 +42,9 @@ func testServer(t *testing.T) (*Server, *httptest.Server, *sql.DB) {
 	// rate limiter global dibersihkan agar kuota antar test tidak tercampur
 	limiter.calls = map[string][]time.Time{}
 	cfg := config.Config{Dir: dir, AppName: "Toko Uji"}
+	for _, o := range overrides {
+		o(&cfg)
+	}
 	i, version := NewInertia(cfg)
 	s := New(d, cfg, mail.New(d, mail.Config{}), i, version)
 	ts := httptest.NewServer(s.Mux)
@@ -217,15 +220,27 @@ func TestPasswordReset(t *testing.T) {
 	_, ts, d := testServer(t)
 	seedUser(t, d, "reset@uji.id", "passwordlama1", "user")
 
+	// permintaan reset: token tersimpan SEBAGAI HASH (temuan audit — bukan
+	// plaintext kredensial hidup di DB/backup)
 	doPost(t, &http.Client{}, ts.URL+"/lupa-password", `{"email":"reset@uji.id"}`)
-	var token string
-	if err := d.QueryRow(`SELECT token FROM password_resets WHERE email='reset@uji.id'`).Scan(&token); err != nil {
+	var stored string
+	if err := d.QueryRow(`SELECT token FROM password_resets WHERE email='reset@uji.id'`).Scan(&stored); err != nil {
 		t.Fatal("token reset tidak dibuat:", err)
+	}
+	if stored == hashOTP("tokenuji-dari-email") {
+		t.Error("hash tabrakan dgn token uji — pilih token uji lain")
+	}
+
+	// reset memakai token plaintext (yang dikirim ke email); hash-nya di DB
+	plaintext := "tokenuji-dari-email"
+	hash := hashOTP(plaintext)
+	if _, err := d.Exec(`UPDATE password_resets SET token=?, expires_at=datetime('now', '+1 hour') WHERE email='reset@uji.id'`, hash); err != nil {
+		t.Fatal(err)
 	}
 
 	// reset dgn konfirmasi cocok (X-Inertia agar JSON body di-merge ke PostForm)
 	res := doPost(t, newClient(), ts.URL+"/reset-password",
-		fmt.Sprintf(`{"token":%q,"password":"passwordbaru2","password_confirmation":"passwordbaru2"}`, token))
+		fmt.Sprintf(`{"token":%q,"password":"passwordbaru2","password_confirmation":"passwordbaru2"}`, plaintext))
 	if res.StatusCode != http.StatusFound {
 		page := doPage(t, newClient(), ts.URL+"/login")
 		t.Fatalf("reset = %d: %v", res.StatusCode, page["props"])
@@ -236,7 +251,7 @@ func TestPasswordReset(t *testing.T) {
 
 	// token sekali pakai
 	res = doPost(t, &http.Client{}, ts.URL+"/reset-password",
-		fmt.Sprintf(`{"token":%q,"password":"passwordbaru3","password_confirmation":"passwordbaru3"}`, token))
+		fmt.Sprintf(`{"token":%q,"password":"passwordbaru3","password_confirmation":"passwordbaru3"}`, plaintext))
 	if res.StatusCode != http.StatusOK { // token tak berlaku → errors
 		t.Fatalf("token bekas = %d, mau 200 (ditolak)", res.StatusCode)
 	}
@@ -523,5 +538,10 @@ func doPostCSRF(t *testing.T, client *http.Client, url, body, csrf string) *http
 	return res
 }
 
-// limiterResetForTest reset state rate limiter antar test.
-func limiterResetForTest() { Sweep() }
+// limiterResetForTest kosongkan seluruh bucket rate limiter antar test
+// (Sweep hanya buang entri kedaluwarsa, kurang untuk isolasi test).
+func limiterResetForTest() {
+	limiter.mu.Lock()
+	limiter.calls = map[string][]time.Time{}
+	limiter.mu.Unlock()
+}

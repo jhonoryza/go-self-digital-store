@@ -6,6 +6,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -71,6 +73,17 @@ func serve(cfg config.Config) {
 		}
 	}()
 
+	// fail-fast konfigurasi produksi (temuan audit: dev-login single gate &
+	// host-header fallback)
+	if cfg.DevLogin && (strings.HasPrefix(cfg.BaseURL, "https") || len(cfg.CorsOrigins) > 0) {
+		log.Fatal("STORE_DEV_LOGIN=1 tidak boleh aktif pada konfigurasi produksi (BaseURL https / CORS terisi) - matikan flag ini.")
+	}
+	if cfg.BaseURL == "" {
+		if len(cfg.CorsOrigins) > 0 {
+			log.Fatal("STORE_BASE_URL wajib diisi saat split-origin (CORS terisi) - tautan email & callback akan salah host.")
+		}
+		log.Printf("PERINGATAN: STORE_BASE_URL kosong - tautan email & sitemap mengikuti Host request. Wajib diisi untuk produksi.")
+	}
 	log.Printf("%s berjalan di %s (dir %s)", cfg.AppName, cfg.Addr, cfg.Dir)
 	log.Fatal(http.ListenAndServe(cfg.Addr, srv.Mux))
 }
@@ -98,9 +111,15 @@ func seed(cfg config.Config) {
 	}
 	var exists int
 	d.QueryRow(`SELECT COUNT(*) FROM users WHERE email=?`, email).Scan(&exists)
+	// tanpa env: generate password acak (temuan audit: default publik
+	// admin12345 = takeover yang diketahui siapa pun). Dicetak SEKALI di sini.
 	pass := os.Getenv("STORE_SEED_ADMIN_PASSWORD")
 	if pass == "" {
-		pass = "admin12345"
+		b := make([]byte, 12)
+		if _, err := rand.Read(b); err != nil {
+			log.Fatal("seed: gagal generate password:", err)
+		}
+		pass = base64.RawURLEncoding.EncodeToString(b)
 	}
 	if exists == 0 {
 		hash, err := auth.HashPassword(pass)

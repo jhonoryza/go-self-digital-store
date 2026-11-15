@@ -23,6 +23,7 @@ import (
 
 const otpTTLMinutes = 15
 const otpResendSeconds = 60
+const otpMaxAttempts = 5
 
 // hashOTP OTP disimpan sebagai sha256 — kebocoran DB tidak langsung memberi kode.
 func hashOTP(code string) string {
@@ -101,9 +102,9 @@ func (s *Server) verifyEmailVerify(w http.ResponseWriter, r *http.Request, u aut
 		return
 	}
 	var stored string
-	var expired int
-	err := s.DB.QueryRow(`SELECT code, expires_at <= datetime('now') FROM email_otps WHERE user_id=?`, u.ID).
-		Scan(&stored, &expired)
+	var expired, attempts int
+	err := s.DB.QueryRow(`SELECT code, expires_at <= datetime('now'), attempts FROM email_otps WHERE user_id=?`, u.ID).
+		Scan(&stored, &expired, &attempts)
 	if err == sql.ErrNoRows {
 		s.renderWithErrors(w, r, "Auth/VerifyEmail", inertia.Props{
 			"email": u.Email, "resend_in": s.otpResendIn(u.ID),
@@ -113,6 +114,15 @@ func (s *Server) verifyEmailVerify(w http.ResponseWriter, r *http.Request, u aut
 		jsonError(w, http.StatusInternalServerError, "kesalahan server")
 		return
 	}
+	// temuan audit: OTP 6 digit tanpa batas percobaan bisa brute force —
+	// cap 5 gagal, mirror login_tokens; OTP dihapus, wajib minta baru.
+	if attempts >= otpMaxAttempts {
+		s.DB.Exec(`DELETE FROM email_otps WHERE user_id=?`, u.ID)
+		s.renderWithErrors(w, r, "Auth/VerifyEmail", inertia.Props{
+			"email": u.Email, "resend_in": s.otpResendIn(u.ID),
+		}, inertia.ValidationErrors{"code": "Terlalu banyak percobaan - minta OTP baru."})
+		return
+	}
 	if expired == 1 {
 		s.renderWithErrors(w, r, "Auth/VerifyEmail", inertia.Props{
 			"email": u.Email, "resend_in": s.otpResendIn(u.ID),
@@ -120,9 +130,10 @@ func (s *Server) verifyEmailVerify(w http.ResponseWriter, r *http.Request, u aut
 		return
 	}
 	if subtle.ConstantTimeCompare([]byte(hashOTP(code)), []byte(stored)) != 1 {
+		s.DB.Exec(`UPDATE email_otps SET attempts=attempts+1 WHERE user_id=?`, u.ID)
 		s.renderWithErrors(w, r, "Auth/VerifyEmail", inertia.Props{
 			"email": u.Email, "resend_in": s.otpResendIn(u.ID),
-		}, inertia.ValidationErrors{"code": "Kode salah."})
+		}, inertia.ValidationErrors{"code": fmt.Sprintf("Kode salah (sisa %d percobaan).", otpMaxAttempts-attempts-1)})
 		return
 	}
 	if _, err := s.DB.Exec(`UPDATE users SET email_verified_at=datetime('now') WHERE id=?`, u.ID); err != nil {

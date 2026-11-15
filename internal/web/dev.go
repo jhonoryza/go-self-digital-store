@@ -14,39 +14,15 @@ import (
 	"github.com/jhonoryza/go-self-digital-store/internal/auth"
 )
 
-// devAccount baris akun untuk halaman dev login.
-type devAccount struct {
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
-	Role  string `json:"role"`
-}
-
-// devAccounts seluruh akun, admin dulu lalu user (nama naik).
-func (s *Server) devAccounts() []devAccount {
-	rows, err := s.DB.Query(`SELECT id, email, name, role FROM users ORDER BY role='user', name, id`)
-	if err != nil {
-		logErr("dev accounts: %v", err)
-		return nil
-	}
-	defer rows.Close()
-	var out []devAccount
-	for rows.Next() {
-		var a devAccount
-		if rows.Scan(&a.ID, &a.Email, &a.Name, &a.Role) == nil {
-			out = append(out, a)
-		}
-	}
-	return out
-}
-
-// devLoginPage GET /dev/login — daftar akun + tombol masuk sebagai.
+// devLoginPage GET /dev/login — form user_id polos. Sengaja TIDAK
+// mengenumerasi akun: halaman dev tetap tidak bocor daftar user bila flag
+// tersalahkan aktif di host yang terlihat orang lain.
 func (s *Server) devLoginPage(w http.ResponseWriter, r *http.Request) {
 	if !s.Cfg.DevLogin {
 		http.NotFound(w, r)
 		return
 	}
-	s.Page(w, r, "Dev/LoginAs", inertia.Props{"accounts": s.devAccounts()})
+	s.Page(w, r, "Dev/LoginAs", inertia.Props{"flash": flashFromQuery(r)})
 }
 
 // devLoginAs POST /dev/login — buat sesi untuk user_id yang dipilih.

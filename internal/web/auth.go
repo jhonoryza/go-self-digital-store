@@ -205,7 +205,9 @@ func (s *Server) forgotPassword(w http.ResponseWriter, r *http.Request) {
 	err := s.DB.QueryRow(`SELECT id FROM users WHERE email=?`, email).Scan(&uid)
 	if err == nil {
 		token := auth.Token()
-		s.DB.Exec(`INSERT INTO password_resets (email, token, expires_at) VALUES (?,?, datetime('now', '+1 hour'))`, email, token)
+		// temuan audit: kredensial bearer di-hash konsisten (sesi/OTP/magic);
+		// plaintext hanya hidup di email, tidak di DB/backup
+		s.DB.Exec(`INSERT INTO password_resets (email, token, expires_at) VALUES (?,?, datetime('now', '+1 hour'))`, email, hashOTP(token))
 		link := s.baseURL(r) + "/reset-password?token=" + token
 		if s.Mail.Enabled() {
 			go func() {
@@ -233,7 +235,7 @@ func (s *Server) resetPassword(w http.ResponseWriter, r *http.Request) {
 		errs["password_confirmation"] = "konfirmasi password tidak cocok"
 	}
 	var email string
-	s.DB.QueryRow(`SELECT email FROM password_resets WHERE token=? AND expires_at > datetime('now')`, token).Scan(&email)
+	s.DB.QueryRow(`SELECT email FROM password_resets WHERE token=? AND expires_at > datetime('now')`, hashOTP(token)).Scan(&email)
 	if email == "" {
 		errs["token"] = "tautan reset tidak berlaku atau kedaluwarsa"
 	}

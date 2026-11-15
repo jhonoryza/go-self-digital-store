@@ -75,6 +75,8 @@ var ipLimits = map[string]int{
 	"download": 30,
 	"magic":    20,
 	"global":   600,
+	"dev":      20, // temuan audit: dev-login gate jangan jadi pintu brute-force
+	"verify":   10, // temuan audit: OTP cap per-IP di atas cap percobaan per-OTP
 }
 
 // ipLimited true bila melewati kuota (dipanggil sebelum handler).
@@ -128,7 +130,11 @@ func (s *Server) clientIP(r *http.Request) string {
 		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 			parts := strings.Split(xff, ",")
 			if ip := strings.TrimSpace(parts[len(parts)-1]); ip != "" {
-				return ip
+				// temuan audit: validasi format — XFF invalid/sampah fallback
+				// ke RemoteAddr (mitigasi utama tetap proxy menormalkan XFF)
+				if net.ParseIP(ip) != nil {
+					return ip
+				}
 			}
 		}
 	}

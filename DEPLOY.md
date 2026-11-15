@@ -32,11 +32,16 @@ server {
         proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto https;
+        # wajib: rate-limit per-IP membaca XFF paling kanan bila
+        # STORE_TRUSTED_PROXY=1 — tanpa ini semua klien dihitung satu IP
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 }
 ```
 
 `STORE_TRUSTED_PROXY=1` wajib bila di belakang proxy agar rate-limit per-IP akurat.
+Aplikasi hanya memercayai entri paling kanan XFF (ditambahkan proxy kita sendiri),
+dan menolak nilai XFF yang bukan IP valid.
 
 ### Env vars (prefix `STORE_*`)
 
@@ -45,7 +50,7 @@ server {
 | `STORE_ADDR` | listen address (default `:8080`) |
 | `STORE_DIR` | direktori data: `store.db`, `files/`, `backups/` |
 | `STORE_NAME` | nama toko (judul halaman, email) |
-| `STORE_BASE_URL` | URL publik API, mis. `https://api.tokokamu.com` — tautan di email |
+| `STORE_BASE_URL` | URL publik API, mis. `https://api.tokokamu.com` — tautan di email. **Wajib di produksi**: server menolak start bila `STORE_CORS_ORIGINS` diisi tapi ini kosong, dan gagal start bila `STORE_DEV_LOGIN=1` bersama URL https atau CORS (pintu dev tak boleh lolos ke publik) |
 | `STORE_CORS_ORIGINS` | origin frontend CF Pages (koma, mis. `https://tokokamu.pages.dev`) |
 | `STORE_SMTP_HOST/PORT/USER/PASS/FROM` | SMTP Brevo: `smtp-relay.brevo.com:587`, user = login SMTP, pass = **SMTP key**. Untuk uji lokal pakai **Mailpit** (`STORE_SMTP_HOST=127.0.0.1 STORE_SMTP_PORT=1025 STORE_SMTP_FROM=dev@toko.local`, lihat email di `http://localhost:8025`) |
 | `STORE_PAYMENT_SECRET` | HMAC webhook adapter kustom (opsional) |
@@ -53,10 +58,12 @@ server {
 | `STORE_COOKIE_SAMESITE` | `none` untuk split-origin (otomatis bila CORS origins diisi), `lax` same-origin |
 | `STORE_TRUSTED_PROXY` | `1` bila di belakang reverse proxy |
 | `STORE_BACKUP_KEEP` | jumlah backup SQLite disimpan (default 7) |
-| `STORE_DEV_LOGIN` | `1` mengaktifkan `/dev/login` (masuk sebagai akun mana pun tanpa password) — **jangan pernah di produksi** |
+| `STORE_DEV_LOGIN` | `1` mengaktifkan `/dev/login` (masuk sebagai akun mana pun tanpa password; form `user_id`, tanpa daftar akun, limit 20 req/menit). **Jangan pernah di produksi** — server menolak start bila digabung https/CORS |
 | `STORE_R2_ENDPOINT/ACCESS_KEY/SECRET_KEY` | Cloudflare R2 untuk gambar produk; kosong = fallback kredensial dari `~/.mc/config.json` (alias `r2`) — cocok untuk dev, produksi isi env |
 | `STORE_R2_BUCKET` | nama bucket bersama (default `webapp`); objek di bawah prefix `STORE_R2_PREFIX` (default `go-self-digital-store`) |
 | `STORE_R2_PUBLIC_BASE` | opsional domain publik bucket (r2.dev / custom domain); kosong = gambar dilayani proxy `/images/` lewat API |
+| `STORE_SEED_ADMIN_EMAIL` | email admin awal `./store seed` (default `admin@example.com`) |
+| `STORE_SEED_ADMIN_PASSWORD` | password admin awal; **kosong = password acak digenerate & dicetak sekali** ke log saat seed (tanpa default publik) — ganti segera setelah login pertama |
 
 ## 2. Frontend di Cloudflare Pages
 
