@@ -39,16 +39,17 @@ function CartBadge() {
 export default function GuestLayout({ children }: { children: ReactNode }) {
   const { auth_user, app_name, brand_logo, dev_login } = usePage<SharedProps>().props;
   const { url } = usePage();
+  const path = url.split("?")[0]; // pathname saja agar filter (?q=…) tak mematikan highlight
   const [open, setOpen] = useState(false);
   const count = useCartCount();
 
   const bottomItems = [
-    { href: "/", label: "Beranda", Icon: Home, active: url === "/" },
-    { href: "/produk", label: "Produk", Icon: Package, active: url === "/produk" || url.startsWith("/produk?") || (url.startsWith("/produk/") && url !== "/produk") },
-    { href: "/keranjang", label: "Keranjang", Icon: ShoppingCart, active: url === "/keranjang", badge: count },
+    { href: "/", label: "Beranda", Icon: Home, active: path === "/" },
+    { href: "/produk", label: "Produk", Icon: Package, active: path === "/produk" || path.startsWith("/produk/") },
+    { href: "/keranjang", label: "Keranjang", Icon: ShoppingCart, active: path === "/keranjang", badge: count },
     auth_user
-      ? { href: "/pesanan", label: "Pesanan", Icon: ReceiptText, active: url === "/pesanan" || url.startsWith("/pesanan/") }
-      : { href: "/login", label: "Masuk", Icon: LogIn, active: url === "/login" },
+      ? { href: "/pesanan", label: "Pesanan", Icon: ReceiptText, active: path === "/pesanan" || path.startsWith("/pesanan/") }
+      : { href: "/login", label: "Masuk", Icon: LogIn, active: path === "/login" },
   ];
 
   return (

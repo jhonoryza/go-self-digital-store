@@ -11,6 +11,7 @@ import type { SharedProps } from "../types";
 export default function AccountLayout({ children }: { children: ReactNode }) {
   const { auth_user, app_name, brand_logo } = usePage<SharedProps>().props;
   const { url } = usePage();
+  const path = url.split("?")[0]; // cocokkan pathname saja
 
   const tabs = [
     ["/dashboard", "Dashboard"],
@@ -20,7 +21,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
   ] as const;
 
   // tab aktif: sama persis atau halaman detail di bawahnya (/pesanan/{no})
-  const aktif = (href: string) => url === href || url.startsWith(href + "/");
+  const aktif = (href: string) => path === href || path.startsWith(href + "/");
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 pb-16 text-zinc-900 sm:pb-0 dark:bg-zinc-950 dark:text-zinc-100">
@@ -68,8 +69,8 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">{children}</main>
       <BottomNav
         items={[
-          { href: "/", label: "Toko", Icon: Store, active: url === "/" },
-          { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard, active: url === "/dashboard" },
+          { href: "/", label: "Toko", Icon: Store, active: path === "/" },
+          { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard, active: path === "/dashboard" },
           { href: "/pesanan", label: "Pesanan", Icon: ReceiptText, active: aktif("/pesanan") },
           { href: "/tiket", label: "Tiket", Icon: LifeBuoy, active: aktif("/tiket") },
           { href: "/profil", label: "Profil", Icon: UserRound, active: aktif("/profil") },

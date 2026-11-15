@@ -22,6 +22,7 @@ import type { SharedProps } from "../types";
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { auth_user, app_name, brand_logo } = usePage<SharedProps>().props;
   const { url } = usePage();
+  const path = url.split("?")[0]; // cocokkan pathname saja - filter (?q=…) tak boleh mematikan highlight
   const [menuOpen, setMenuOpen] = useState(false);
 
   const tabs = [
@@ -38,7 +39,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   // tab aktif: "/admin" (dashboard) hanya persis; tab lain juga mencakup
   // halaman detail di bawahnya (/admin/orders/{no})
   const aktif = (href: string) =>
-    href === "/admin" ? url === "/admin" : url === href || url.startsWith(href + "/");
+    href === "/admin" ? path === "/admin" : path === href || path.startsWith(href + "/");
 
   const moreItems = [
     { href: "/admin/tiket", label: "Tiket", Icon: LifeBuoy },
@@ -121,7 +122,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       )}
       <BottomNav
         items={[
-          { href: "/admin", label: "Dashboard", Icon: LayoutDashboard, active: url === "/admin" },
+          { href: "/admin", label: "Dashboard", Icon: LayoutDashboard, active: path === "/admin" },
           { href: "/admin/orders", label: "Orders", Icon: ReceiptText, active: aktif("/admin/orders") },
           { href: "/admin/produk", label: "Produk", Icon: Package, active: aktif("/admin/produk") },
           { href: "/admin/users", label: "Users", Icon: Users, active: aktif("/admin/users") },
