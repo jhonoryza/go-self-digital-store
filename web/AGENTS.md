@@ -29,11 +29,19 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
   prop `dev_login` aktif; route Go tidak terdaftar tanpa `STORE_DEV_LOGIN=1`).
 - `src/lib/cart.ts` — keranjang localStorage (event `cart-change`); server
   memvalidasi ulang harga saat checkout. `CartItem.image_url` snapshot gambar.
+- `src/components/BottomNav.tsx` — bar navigasi bawah ala aplikasi bersama
+  (item: href/label/Icon/active/badge/onClick); hanya tampil di bawah `sm`,
+  `print:hidden`, aman safe-area. Dipakai shell publik + kedua dashboard.
 - `src/components/GuestLayout.tsx` — shell publik: header sticky, flash toast,
-  dan `BottomNav` (Beranda/Produk/Keranjang/Pesanan atau Masuk) yang hanya
-  tampil di bawah `sm` ala aplikasi; root diberi `pb-16 sm:pb-0` agar footer
-  tidak tertutup bar. Menu hamburger mobile hanya pelengkap (Ketentuan/Dev
-  Login/Daftar/Admin).
+  bottom nav (Beranda/Produk/Keranjang/Pesanan atau Masuk); root diberi
+  `pb-16 sm:pb-0` agar footer tidak tertutup bar. Menu hamburger mobile hanya
+  pelengkap (Ketentuan/Dev Login/Daftar/Admin).
+- `src/components/AccountLayout.tsx` — dashboard user: tab strip hanya `sm+`;
+  mobile memakai bottom nav (Toko/Dashboard/Pesanan/Tiket/Profil), tombol
+  Keluar jadi ikon, email & tombol Admin disembunyikan di mobile.
+- `src/components/AdminLayout.tsx` — konsol admin: pola sama; bottom nav 5
+  slot (Dashboard/Orders/Produk/Users + tombol Menu) dengan sheet overlay
+  untuk pelengkap (Tiket/Mail Log/Gateway/Setting).
 - `src/components/ProductThumb.tsx` — kartu gambar produk (foto pertama dari
   R2, fallback ikon jenis); dipakai landing/katalog/keranjang.
 - `src/pages/Admin/Products.tsx` — `ImageManager` unggah/hapus gambar (maks 5,

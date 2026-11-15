@@ -1,6 +1,7 @@
 import { Link, usePage } from "@inertiajs/react";
 import { Home, LogIn, Menu, Package, ReceiptText, ShoppingCart, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import BottomNav from "./BottomNav";
 import ThemeToggle from "./ThemeToggle";
 import { cartCount, getCart } from "../lib/cart";
 import type { SharedProps } from "../types";
@@ -60,55 +61,21 @@ function Flash() {
   );
 }
 
-// BottomNav navigasi bawah ala aplikasi - hanya tampil di layar sempit,
-// item aktif diwarnai brand. Ikon + label pendek, badge keranjang ikut event.
-function BottomNav() {
-  const { url } = usePage();
-  const { auth_user } = usePage<SharedProps>().props;
-  const count = useCartCount();
-  const pesanan = auth_user
-    ? { href: "/pesanan", label: "Pesanan", Icon: ReceiptText, active: url === "/pesanan" || url.startsWith("/pesanan/"), badge: 0 }
-    : { href: "/login", label: "Masuk", Icon: LogIn, active: url === "/login", badge: 0 };
-  const items = [
-    { href: "/", label: "Beranda", Icon: Home, active: url === "/", badge: 0 },
-    { href: "/produk", label: "Produk", Icon: Package, active: url === "/produk" || url.startsWith("/produk?") || (url.startsWith("/produk/") && url !== "/produk"), badge: 0 },
-    { href: "/keranjang", label: "Keranjang", Icon: ShoppingCart, active: url === "/keranjang", badge: count },
-    pesanan,
-  ];
-  return (
-    <nav
-      aria-label="Navigasi utama"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden dark:border-zinc-800 dark:bg-zinc-950/95"
-    >
-      <div className="grid grid-cols-4">
-        {items.map(({ href, label, Icon, active, badge }) => (
-          <Link
-            key={href}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={`flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${
-              active ? "text-brand-600 dark:text-brand-400" : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-            }`}
-          >
-            <span className="relative">
-              <Icon className="h-5 w-5" aria-hidden="true" />
-              {badge > 0 && (
-                <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[9px] font-bold text-white">
-                  {badge}
-                </span>
-              )}
-            </span>
-            {label}
-          </Link>
-        ))}
-      </div>
-    </nav>
-  );
-}
-
 export default function GuestLayout({ children }: { children: ReactNode }) {
   const { auth_user, app_name, brand_logo, dev_login } = usePage<SharedProps>().props;
+  const { url } = usePage();
   const [open, setOpen] = useState(false);
+  const count = useCartCount();
+
+  const bottomItems = [
+    { href: "/", label: "Beranda", Icon: Home, active: url === "/" },
+    { href: "/produk", label: "Produk", Icon: Package, active: url === "/produk" || url.startsWith("/produk?") || (url.startsWith("/produk/") && url !== "/produk") },
+    { href: "/keranjang", label: "Keranjang", Icon: ShoppingCart, active: url === "/keranjang", badge: count },
+    auth_user
+      ? { href: "/pesanan", label: "Pesanan", Icon: ReceiptText, active: url === "/pesanan" || url.startsWith("/pesanan/") }
+      : { href: "/login", label: "Masuk", Icon: LogIn, active: url === "/login" },
+  ];
+
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 pb-16 text-zinc-900 sm:pb-0 dark:bg-zinc-950 dark:text-zinc-100">
       <Flash />
@@ -172,7 +139,7 @@ export default function GuestLayout({ children }: { children: ReactNode }) {
         </div>
         {open && (
           <nav className="border-t border-zinc-200 px-4 py-3 text-sm sm:hidden dark:border-zinc-800">
-            {/* utama sudah di BottomNav; menu ini hanya pelengkap */}
+            {/* utama sudah di bottom nav; menu ini hanya pelengkap */}
             <Link href="/ketentuan" className="block py-2" onClick={() => setOpen(false)}>Ketentuan</Link>
             {dev_login && (
               <Link href="/dev/login" className="block py-2 text-brass-600 dark:text-brass-400" onClick={() => setOpen(false)}>
@@ -206,7 +173,7 @@ export default function GuestLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </footer>
-      <BottomNav />
+      <BottomNav items={bottomItems} />
     </div>
   );
 }
