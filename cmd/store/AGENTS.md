@@ -16,7 +16,8 @@ Entry point binary `store` — tiga subcommand tanpa flag library eksternal.
 - `migrate`: migrasi lalu keluar (dipakai Docker/compose init).
 - `seed`: idempoten — skip bila email admin sudah ada. Default
   `admin@example.com / admin12345` (override: `STORE_SEED_ADMIN_EMAIL/PASSWORD`).
-  Seed juga 4 produk contoh (file/key/link) — slug di-skip bila sudah ada.
+  Seed juga 4 produk contoh (file/key/link) + dummy hingga 50, semuanya dengan
+  kategori (prefix nama) dan tags (jenis + pool) — slug di-skip bila sudah ada.
 - Worker loop interval 15 menit; backup hanya jalan bila SMTP enabled (proxy
   sederhana "produksi aktif").
 

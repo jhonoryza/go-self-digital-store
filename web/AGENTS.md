@@ -34,7 +34,7 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
 - `src/pages/Admin/Products.tsx` — `ImageManager` unggah/hapus gambar (maks 5,
   jpg/png/webp, 2 MB) via multipart `images` ke `/admin/produk/{id}/images`;
   unggah butuh produk sudah tersimpan (ada id).
-- `src/pages/{Public,Auth,Account,Admin,Dev}` — halaman; nama komponen = path
+- `src/pages/{Public,Auth,Account,Admin,Dev}` — halaman; nama komponen = path (katalog `Public/Products.tsx`: panel cari/filter/urut satu form GET, paginasi mempertahankan filter via `katalogURL`)
   komponen Inertia dari backend (mis. `Public/Landing`).
 - `src/pages/Admin/Settings.tsx` — setting runtime (SMTP via Mailer.Reconfigure,
   brand nama+logo di R2, konten privasi/ketentuan, SEO per halaman); semua

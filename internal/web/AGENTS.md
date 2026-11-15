@@ -18,7 +18,8 @@ request asing ditolak sebelum di-buffer.
 | `inertia.go` | Root template + resolver aset (manifest/hot) + version |
 | `middleware.go` | secHeaders, CORS, rate limit in-memory (`ipLimits`), clientIP (proxy-aware), Sweep |
 | `helpers.go` | settings, audit, rupiah, truncate, Page() (props bersama: auth_user + csrf_token), Redirect, flash ?ok=/&err= |
-| `public.go` | landing, list produk (paginasi 12/hal `?page=N`), detail produk, healthz |
+| `public.go` | landing, katalog (paginasi 12/hal + `?q` nama + `?kategori` + `?tag` + `?harga_min/harga_max` + `?sort=termurah\|termahal\|terbaru\|terlama`), detail produk, healthz |
+| taksonomi | kategori teks tunggal + tags array JSON kolom `products.category/tags`; filter tag = `tags LIKE '%"tag"%'`; opsi filter dari `catalogCategories/catalogTags` |
 | `auth.go` | register/login/logout, lupa+reset password, lockout (5 gagal→10 menit, timing equalizer) |
 | `account.go` `orders.go` | profil, ganti password, pesanan milik sendiri (user_id ATAU email cocok), invoice, dashboard stats |
 | `checkout.go` | checkout tx, halaman bayar ber-token, webhook, `markOrderPaid` idempoten + validasi nominal, `loadOrder` |

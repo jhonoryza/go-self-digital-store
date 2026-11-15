@@ -70,6 +70,27 @@ export default function ProductDetail({ product, images, seo }: Props) {
           </div>
         )}
         <h1 className="text-3xl font-bold">{product.title}</h1>
+        {(product.category || (product.tags && product.tags.length > 0)) && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {product.category && (
+              <Link
+                href={`/produk?kategori=${encodeURIComponent(product.category)}`}
+                className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-300 dark:hover:bg-brand-900"
+              >
+                {product.category}
+              </Link>
+            )}
+            {product.tags?.map((t) => (
+              <Link
+                key={t}
+                href={`/produk?tag=${encodeURIComponent(t)}`}
+                className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+              >
+                #{t}
+              </Link>
+            ))}
+          </div>
+        )}
         <p className="mt-4 whitespace-pre-wrap leading-relaxed text-zinc-600 dark:text-zinc-400">
           {product.description}
         </p>

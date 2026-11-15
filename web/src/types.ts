@@ -32,9 +32,21 @@ export interface Product {
   price: number;
   type: string;
   featured: boolean;
+  category?: string; // kategori opsional (taksonomi)
+  tags?: string[]; // tag opsional (taksonomi)
   image_url?: string; // gambar pertama (kartu katalog)
   meta_title?: string; // SEO opsional (form admin)
   meta_description?: string;
+}
+
+// state filter katalog yang dikirim balik server (cermiri catalogFilter Go)
+export interface CatalogFilters {
+  q?: string;
+  kategori?: string;
+  tag?: string;
+  harga_min?: number;
+  harga_max?: number;
+  sort?: string;
 }
 
 // gambar produk yang tersimpan di bucket R2 (maks 5 per produk)

@@ -19,6 +19,8 @@ interface Product {
   key_count: number;
   meta_title: string;
   meta_description: string;
+  category?: string;
+  tags?: string[];
 }
 
 interface Props extends SharedProps {
@@ -68,6 +70,7 @@ export default function AdminProducts({ products, images }: Props) {
                 </div>
                 <p className="mt-0.5 text-xs text-zinc-500">
                   <span className="font-mono">{p.slug}</span> - {p.type} - {rupiah(p.price)}
+                  {p.category && ` - ${p.category}`}
                   {p.type === "key" && ` - stok kunci: ${p.key_count}`}
                   {p.type === "file" && p.file_name && ` - ${p.file_name}`}
                   {(images[String(p.id)]?.length ?? 0) > 0 && ` - ${images[String(p.id)].length} gambar` }
@@ -135,6 +138,8 @@ function ProductForm({
     file: null as File | null,
     meta_title: product?.meta_title ?? "",
     meta_description: product?.meta_description ?? "",
+    kategori: product?.category ?? "",
+    tags: product?.tags?.join(", ") ?? "",
   });
   const keysForm = useForm({ keys: "" });
   const fileRef = useRef<HTMLInputElement>(null);
@@ -174,6 +179,20 @@ function ProductForm({
             className="w-full rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800"
             value={form.data.price} onChange={(e) => form.setData("price", e.target.value)} required />
           {form.errors.price && <p className="mt-1 text-xs text-red-600">{form.errors.price}</p>}
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium">Kategori (opsional)</label>
+          <input id="kategori"
+            className="w-full rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+            value={form.data.kategori} onChange={(e) => form.setData("kategori", e.target.value)}
+            placeholder="mis. Template, E-Book, Preset" />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-xs font-medium">Tag (opsional, pisahkan dengan koma)</label>
+          <input id="tags"
+            className="w-full rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+            value={form.data.tags} onChange={(e) => form.setData("tags", e.target.value)}
+            placeholder="mis. unduhan, siap-pakai, favorit" />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium">Jenis</label>

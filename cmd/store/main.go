@@ -6,6 +6,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -114,14 +115,14 @@ func seed(cfg config.Config) {
 
 	// produk contoh + dummy hingga 50 item (idempoten: skip bila slug sudah ada)
 	samples := []struct {
-		slug, title, desc string
-		price             int
-		typ               string
+		slug, title, desc, category, tags string
+		price                             int
+		typ                               string
 	}{
-		{"paket-template-landing", "Paket Template Landing Page", "5 template landing page siap pakai (HTML + Tailwind), termasuk dokumentasi.", 149000, "file"},
-		{"e-book-go-golang", "E-Book: Belajar Go dari Nol", "120 halaman PDF bahasa Indonesia: sintaks dasar sampai deploy ke VPS.", 79000, "file"},
-		{"kunci-tools-premium", "Kunci Aktivasi Tools Premium", "Kunci lisensi perangkat lunak desktop, 1 order = 1 kunci.", 250000, "key"},
-		{"notion-dashboard-umkm", "Notion Dashboard UMKM", "Template Notion manajemen usaha kecil - tautan duplikat ke workspace Anda.", 59000, "link"},
+		{"paket-template-landing", "Paket Template Landing Page", "5 template landing page siap pakai (HTML + Tailwind), termasuk dokumentasi.", "Template", `["unduhan","siap-pakai","favorit"]`, 149000, "file"},
+		{"e-book-go-golang", "E-Book: Belajar Go dari Nol", "120 halaman PDF bahasa Indonesia: sintaks dasar sampai deploy ke VPS.", "E-Book", `["unduhan","belajar","promo"]`, 79000, "file"},
+		{"kunci-tools-premium", "Kunci Aktivasi Tools Premium", "Kunci lisensi perangkat lunak desktop, 1 order = 1 kunci.", "Lisensi", `["lisensi","aktivasi","premium"]`, 250000, "key"},
+		{"notion-dashboard-umkm", "Notion Dashboard UMKM", "Template Notion manajemen usaha kecil - tautan duplikat ke workspace Anda.", "Aplikasi", `["akses","favorit"]`, 59000, "link"},
 	}
 	for _, s := range samples {
 		var n int
@@ -129,8 +130,8 @@ func seed(cfg config.Config) {
 		if n > 0 {
 			continue
 		}
-		if _, err := d.Exec(`INSERT INTO products (slug, title, description, price, type, featured) VALUES (?,?,?,?,?,1)`,
-			s.slug, s.title, s.desc, s.price, s.typ); err != nil {
+		if _, err := d.Exec(`INSERT INTO products (slug, title, description, price, type, featured, category, tags) VALUES (?,?,?,?,?,1,?,?)`,
+			s.slug, s.title, s.desc, s.price, s.typ, s.category, s.tags); err != nil {
 			must(err)
 		}
 	}
@@ -192,8 +193,25 @@ func seed(cfg config.Config) {
 			"key":  "Kunci lisensi " + pr.niche + " - satu order berisi satu kunci aktivasi resmi yang dapat dipakai pada satu perangkat.",
 			"link": "Akses " + pr.niche + " berupa tautan duplikat ke workspace Anda. Buka kapan saja setelah pembayaran terverifikasi.",
 		}[typ]
-		if _, err := d.Exec(`INSERT INTO products (slug, title, description, price, type, featured) VALUES (?,?,?,?,?,?)`,
-			slug, pr.nama, desc, price, typ, feat); err != nil {
+		category := "Lainnya"
+		for _, c := range []string{"Preset", "UI Kit", "Font", "E-Book", "Template", "Mockup", "Icon", "Spreadsheet", "Plugin", "Koleksi"} {
+			if strings.HasPrefix(pr.nama, c) {
+				category = c
+				break
+			}
+		}
+		baseTags := map[string][]string{
+			"file": {"unduhan", "siap-pakai"},
+			"key":  {"lisensi", "aktivasi"},
+			"link": {"akses", "tautan"},
+		}
+		tags := append(baseTags[typ], []string{"favorit", "promo", "premium", "baru"}[i%4])
+		tagsJSON, err := json.Marshal(tags)
+		if err != nil {
+			tagsJSON = []byte("[]")
+		}
+		if _, err := d.Exec(`INSERT INTO products (slug, title, description, price, type, featured, category, tags) VALUES (?,?,?,?,?,?,?,?)`,
+			slug, pr.nama, desc, price, typ, feat, category, string(tagsJSON)); err != nil {
 			must(err)
 		}
 		// pelengkap sesuai jenis: berkas contoh utk file, stok kunci utk key,

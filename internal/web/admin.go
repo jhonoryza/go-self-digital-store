@@ -164,7 +164,7 @@ type productAdmin struct {
 }
 
 func (s *Server) adminProducts(w http.ResponseWriter, r *http.Request, u auth.User) {
-	rows, err := s.DB.Query(`SELECT id, slug, title, description, price, type, featured, active, file_path, file_name, ext_url, meta_title, meta_description,
+	rows, err := s.DB.Query(`SELECT id, slug, title, description, price, type, featured, active, file_path, file_name, ext_url, meta_title, meta_description, category, tags,
 		(SELECT COUNT(*) FROM license_keys k WHERE k.product_id=p.id AND k.order_item_id IS NULL)
 		FROM products p ORDER BY id DESC`)
 	if err != nil {
@@ -175,18 +175,47 @@ func (s *Server) adminProducts(w http.ResponseWriter, r *http.Request, u auth.Us
 	var products []map[string]any
 	for rows.Next() {
 		var id int64
-		var slug, title, desc, typ, filePath, fileName, extURL, metaTitle, metaDesc string
+		var slug, title, desc, typ, filePath, fileName, extURL, metaTitle, metaDesc, category, tagsJSON string
 		var price, featured, active, keyCount int
-		if rows.Scan(&id, &slug, &title, &desc, &price, &typ, &featured, &active, &filePath, &fileName, &extURL, &metaTitle, &metaDesc, &keyCount) == nil {
+		if rows.Scan(&id, &slug, &title, &desc, &price, &typ, &featured, &active, &filePath, &fileName, &extURL, &metaTitle, &metaDesc, &category, &tagsJSON, &keyCount) == nil {
 			products = append(products, map[string]any{
 				"id": id, "slug": slug, "title": title, "description": desc, "price": price,
 				"type": typ, "featured": featured == 1, "active": active == 1,
 				"file_path": filePath, "file_name": fileName, "ext_url": extURL, "key_count": keyCount,
 				"meta_title": metaTitle, "meta_description": metaDesc,
+				"category": category, "tags": parseTagsJSON(tagsJSON),
 			})
 		}
 	}
 	s.Page(w, r, "Admin/Products", inertia.Props{"products": products, "images": s.allProductImages(r), "flash": flashFromQuery(r)})
+}
+
+// parseTagsForm ubah input tag dipisah koma/baris baru menjadi JSON array
+// bersih: trim, kosong dibuang, duplikat dilebur (case-insensitive), maks 10
+// tag dan 40 karakter per tag.
+func parseTagsForm(raw string) string {
+	var tags []string
+	seen := map[string]bool{}
+	for _, t := range strings.FieldsFunc(raw, func(r rune) bool { return r == ',' || r == '\n' }) {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		if r := []rune(t); len(r) > 40 {
+			t = string(r[:40])
+		}
+		if key := strings.ToLower(t); seen[key] {
+			continue
+		} else {
+			seen[key] = true
+		}
+		tags = append(tags, t)
+	}
+	if tags == nil {
+		tags = []string{}
+	}
+	b, _ := json.Marshal(tags)
+	return string(b)
 }
 
 // adminProductSave POST /admin/produk (create) dan /admin/produk/{id} (update).
@@ -212,6 +241,8 @@ func (s *Server) adminProductSave(w http.ResponseWriter, r *http.Request, u auth
 	extURL := strings.TrimSpace(r.PostFormValue("ext_url"))
 	metaTitle := strings.TrimSpace(r.PostFormValue("meta_title"))
 	metaDesc := strings.TrimSpace(r.PostFormValue("meta_description"))
+	category := strings.TrimSpace(r.PostFormValue("kategori"))
+	tagsJSON := parseTagsForm(r.PostFormValue("tags"))
 
 	errs := inertia.ValidationErrors{}
 	if slug == "" || !validEmail(slug+"@x.y") || strings.ContainsAny(slug, " ") {
@@ -263,9 +294,9 @@ func (s *Server) adminProductSave(w http.ResponseWriter, r *http.Request, u auth
 	}
 
 	if id == 0 {
-		_, err := s.DB.Exec(`INSERT INTO products (slug, title, description, price, type, featured, active, file_path, file_name, ext_url, meta_title, meta_description)
-			VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-			slug, title, description, price, ptype, boolInt(featured), boolInt(active), savedPath, savedName, extURL, metaTitle, metaDesc)
+		_, err := s.DB.Exec(`INSERT INTO products (slug, title, description, price, type, featured, active, file_path, file_name, ext_url, meta_title, meta_description, category, tags)
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			slug, title, description, price, ptype, boolInt(featured), boolInt(active), savedPath, savedName, extURL, metaTitle, metaDesc, category, tagsJSON)
 		if err != nil {
 			if strings.Contains(err.Error(), "UNIQUE") {
 				s.renderWithErrors(w, r, "Admin/Products", nil, inertia.ValidationErrors{"slug": "slug sudah dipakai"})
@@ -286,11 +317,11 @@ func (s *Server) adminProductSave(w http.ResponseWriter, r *http.Request, u auth
 		if old != "" && old != savedPath {
 			os.Remove(filepath.Join(s.filesDir(), old))
 		}
-		s.DB.Exec(`UPDATE products SET slug=?, title=?, description=?, price=?, type=?, featured=?, active=?, file_path=?, file_name=?, ext_url=?, updated_at=datetime('now') WHERE id=?`,
-			slug, title, description, price, ptype, boolInt(featured), boolInt(active), savedPath, savedName, extURL, id)
+		s.DB.Exec(`UPDATE products SET slug=?, title=?, description=?, price=?, type=?, featured=?, active=?, file_path=?, file_name=?, ext_url=?, category=?, tags=?, updated_at=datetime('now') WHERE id=?`,
+			slug, title, description, price, ptype, boolInt(featured), boolInt(active), savedPath, savedName, extURL, category, tagsJSON, id)
 	} else {
-		s.DB.Exec(`UPDATE products SET slug=?, title=?, description=?, price=?, type=?, featured=?, active=?, ext_url=?, updated_at=datetime('now') WHERE id=?`,
-			slug, title, description, price, ptype, boolInt(featured), boolInt(active), extURL, id)
+		s.DB.Exec(`UPDATE products SET slug=?, title=?, description=?, price=?, type=?, featured=?, active=?, ext_url=?, category=?, tags=?, updated_at=datetime('now') WHERE id=?`,
+			slug, title, description, price, ptype, boolInt(featured), boolInt(active), extURL, category, tagsJSON, id)
 	}
 	audit(s.DB, "produk.update", slug, fmt.Sprintf("id %d", id))
 	s.flashOK(w, r, "/admin/produk", "Produk diperbarui.")
