@@ -1415,6 +1415,13 @@ func TestE2EAdminConsole(t *testing.T) {
 	if !masked {
 		t.Errorf("secret tidak termasked: %v", tripay["fields"])
 	}
+	// status konfigurasi: tripay sudah diisi, mock belum
+	if tripay["configured"] != true {
+		t.Errorf("tripay configured = %v, mau true", tripay["configured"])
+	}
+	if mock != nil && mock["configured"] != false {
+		t.Errorf("mock configured = %v, mau false", mock["configured"])
+	}
 
 	// activate tripay
 	res = doPostCSRF(t, admin, ts.URL+"/admin/gateway/activate", `{"provider":"tripay"}`, acsrf)

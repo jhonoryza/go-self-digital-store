@@ -498,7 +498,7 @@ func (s *Server) adminGateways(w http.ResponseWriter, r *http.Request, u auth.Us
 		}
 		providers = append(providers, map[string]any{
 			"name": p.Name(), "label": p.Label(), "fields": fields,
-			"simulated": pay.IsSimulated(p),
+			"simulated": pay.IsSimulated(p), "configured": len(cfg) > 0,
 		})
 	}
 	s.Page(w, r, "Admin/Gateways", inertia.Props{
