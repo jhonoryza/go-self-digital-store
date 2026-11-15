@@ -5,6 +5,7 @@ package web
 import (
 	"database/sql"
 	"net/http"
+	"strconv"
 
 	inertia "github.com/romsar/gonertia/v3"
 )
@@ -53,15 +54,32 @@ func (s *Server) landing(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// productsList semua produk aktif.
+// productsPerPage jumlah produk aktif per halaman katalog.
+const productsPerPage = 12
+
+// productsList produk aktif, paginasi ?page=N (12 per halaman).
 func (s *Server) productsList(w http.ResponseWriter, r *http.Request) {
+	var total int
+	s.DB.QueryRow(`SELECT COUNT(*) FROM products WHERE active=1`).Scan(&total)
+	lastPage := (total + productsPerPage - 1) / productsPerPage
+	if lastPage < 1 {
+		lastPage = 1
+	}
+	page := 1
+	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p >= 1 && p <= lastPage {
+		page = p
+	}
 	products := scanProducts(s.DB.Query(
-		`SELECT id, slug, title, description, price, type, featured FROM products WHERE active=1 ORDER BY id DESC`))
+		`SELECT id, slug, title, description, price, type, featured FROM products WHERE active=1 ORDER BY id DESC LIMIT ? OFFSET ?`,
+		productsPerPage, (page-1)*productsPerPage))
 	s.attachFirstImages(r, products)
 	s.Page(w, r, "Public/Products", inertia.Props{
-		"products": products,
-		"seo":      s.seoFor("seo.products.title", "seo.products.description"),
-		"flash":    flashFromQuery(r),
+		"products":  products,
+		"page":      page,
+		"last_page": lastPage,
+		"total":     total,
+		"seo":       s.seoFor("seo.products.title", "seo.products.description"),
+		"flash":     flashFromQuery(r),
 	})
 }
 

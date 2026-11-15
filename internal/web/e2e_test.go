@@ -287,6 +287,37 @@ func TestE2EPublicPages(t *testing.T) {
 		t.Errorf("slug list = %v", slugs)
 	}
 
+	// paginasi katalog: tambah 13 produk aktif → total 15 aktif = 2 halaman (12 per halaman)
+	for i := 1; i <= 13; i++ {
+		seedProduct(t, d, fmt.Sprintf("pag-%02d", i), 1000, "file")
+	}
+	page = doPage(t, newClient(), ts.URL+"/produk")
+	if got := prop(t, page)["last_page"].(float64); got != 2 {
+		t.Errorf("last_page = %v, mau 2", got)
+	}
+	if got := len(prop(t, page)["products"].([]any)); got != 12 {
+		t.Errorf("produk halaman 1 = %d, mau 12", got)
+	}
+	if got := prop(t, page)["total"].(float64); got != 15 {
+		t.Errorf("total = %v, mau 15", got)
+	}
+	// halaman 2 berisi sisa produk
+	page = doPage(t, newClient(), ts.URL+"/produk?page=2")
+	prods2 := prop(t, page)["products"].([]any)
+	if len(prods2) != 3 {
+		t.Errorf("produk halaman 2 = %d, mau 3", len(prods2))
+	}
+	if pg := prop(t, page)["page"].(float64); pg != 2 {
+		t.Errorf("page = %v, mau 2", pg)
+	}
+	// page di luar jangkauan / tidak valid di-clamp, bukan error
+	for _, q := range []string{"99", "0", "-1", "bukan-angka"} {
+		page = doPage(t, newClient(), ts.URL+"/produk?page="+q)
+		if len(prop(t, page)["products"].([]any)) != 12 {
+			t.Errorf("page=%s: produk = %d, mau clamp ke halaman 1 (12)", q, len(prop(t, page)["products"].([]any)))
+		}
+	}
+
 	// detail produk aktif
 	page = doPage(t, newClient(), ts.URL+"/produk/unggulan-uji")
 	pd := prop(t, page)["product"].(map[string]any)
