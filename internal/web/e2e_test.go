@@ -318,11 +318,14 @@ func TestE2EPublicPages(t *testing.T) {
 		}
 	}
 
-	// detail produk aktif
+	// detail produk aktif; produk tanpa gambar tetap membawa images []
 	page = doPage(t, newClient(), ts.URL+"/produk/unggulan-uji")
 	pd := prop(t, page)["product"].(map[string]any)
 	if pd["price"].(float64) != 99000 || pd["type"] != "file" {
 		t.Errorf("detail = %v", pd)
+	}
+	if imgs, ok := prop(t, page)["images"].([]any); !ok || len(imgs) != 0 {
+		t.Errorf("images = %v, mau array kosong (bukan null)", prop(t, page)["images"])
 	}
 
 	// detail nonaktif / tidak ada → 404

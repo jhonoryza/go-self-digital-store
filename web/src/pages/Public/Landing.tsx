@@ -10,8 +10,9 @@ interface Props extends SharedProps {
   seo?: { "seo.home.title"?: string; "seo.home.description"?: string };
 }
 
-export default function Landing({ featured, seo }: Props) {
+export default function Landing({ featured: rawFeatured, seo }: Props) {
   const { app_name } = usePage<SharedProps>().props;
+  const featured = rawFeatured ?? []; // props nil dihilangkan gonertia
   return (
     <>
       <Head>

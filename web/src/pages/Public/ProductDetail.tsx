@@ -12,7 +12,8 @@ interface Props extends SharedProps {
   seo?: { "seo.product.title"?: string; "seo.product.description"?: string };
 }
 
-export default function ProductDetail({ product, images, seo }: Props) {
+export default function ProductDetail({ product, images: rawImages, seo }: Props) {
+  const images = rawImages ?? []; // props nil dihilangkan gonertia
   const { app_name } = usePage<SharedProps>().props;
   const metaTitle = (seo?.["seo.product.title"] || "{title} - {price}")
     .replace("{title}", product.title)

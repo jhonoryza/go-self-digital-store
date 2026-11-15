@@ -115,7 +115,7 @@ func (s *Server) productImagesOf(r *http.Request, productID int64) []productImag
 		return nil
 	}
 	defer rows.Close()
-	var out []productImageRow
+	out := []productImageRow{} // array kosong, bukan nil - prop wajib ada
 	for rows.Next() {
 		var id int64
 		var key string
