@@ -13,13 +13,14 @@ import {
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import BottomNav from "./BottomNav";
+import FlashToast from "./FlashToast";
 import ThemeToggle from "./ThemeToggle";
 import type { SharedProps } from "../types";
 
 // Layout konsol admin: header + tab nav (desktop) + bottom nav (mobile,
 // pelengkap lewat sheet "Menu"). Flash ditampilkan sebagai toast.
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { auth_user, app_name, brand_logo, flash } = usePage<SharedProps>().props;
+  const { auth_user, app_name, brand_logo } = usePage<SharedProps>().props;
   const { url } = usePage();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -46,16 +47,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-100 pb-16 text-zinc-900 sm:pb-0 dark:bg-zinc-950 dark:text-zinc-100">
-      {flash?.ok && (
-        <div className="fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg" role="status">
-          {flash.ok}
-        </div>
-      )}
-      {flash?.err && (
-        <div className="fixed top-4 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg" role="status">
-          {flash.err}
-        </div>
-      )}
+      <FlashToast />
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
           <div className="flex items-center gap-3">
