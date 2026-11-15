@@ -63,3 +63,124 @@ html {
   --color-brass-500: #c9992e;
   --color-brass-600: #a97a1f;
 }
+
+/* ===== Tema toko (dipilih admin di /admin/setting, dikirim sebagai
+   data-theme di <html> oleh shell Go dan disinkronkan ulang React dari
+   props.theme). Menimpa skala --color-brand-* sehingga seluruh komponen
+   ikut berubah di mode terang maupun gelap; estetika tambahan per tema
+   ditulis tanpa layer agar mengalahkan utilitas Tailwind. ===== */
+
+/* Brutalism: aksen lime asam, sudut tegas, garis tebal, bayangan offset */
+:root[data-theme="brutalism"] {
+  --color-brand-50: #f7fee7;
+  --color-brand-100: #ecfccb;
+  --color-brand-200: #d9f99d;
+  --color-brand-300: #bef264;
+  --color-brand-400: #a3e635;
+  --color-brand-500: #84cc16;
+  --color-brand-600: #4d7c0f; /* digelapkan agar teks putih tombol >= 4.5:1 */
+  --color-brand-700: #3f6212;
+  --color-brand-800: #365314;
+  --color-brand-900: #365314;
+  --color-brand-950: #1a2e05;
+}
+:root[data-theme="brutalism"] .rounded-lg,
+:root[data-theme="brutalism"] .rounded-xl,
+:root[data-theme="brutalism"] .rounded-2xl,
+:root[data-theme="brutalism"] .rounded-3xl,
+:root[data-theme="brutalism"] .rounded-full {
+  border-radius: 0;
+}
+:root[data-theme="brutalism"] .border {
+  border-width: 2px;
+}
+:root[data-theme="brutalism"] .shadow-sm {
+  box-shadow: 3px 3px 0 0 var(--color-zinc-900);
+}
+:root[data-theme="brutalism"] .shadow-md,
+:root[data-theme="brutalism"] .shadow-lg {
+  box-shadow: 4px 4px 0 0 var(--color-zinc-900);
+}
+html.dark[data-theme="brutalism"] .shadow-sm {
+  box-shadow: 3px 3px 0 0 var(--color-zinc-700);
+}
+html.dark[data-theme="brutalism"] .shadow-md,
+html.dark[data-theme="brutalism"] .shadow-lg {
+  box-shadow: 4px 4px 0 0 var(--color-zinc-700);
+}
+
+/* Neon Cyber: fuchsia menyala + glow pada kartu dan tombol utama (mode gelap) */
+:root[data-theme="neon"] {
+  --color-brand-50: #fdf4ff;
+  --color-brand-100: #fae8ff;
+  --color-brand-200: #f5d0fe;
+  --color-brand-300: #f0abfc;
+  --color-brand-400: #e879f9;
+  --color-brand-500: #d946ef;
+  --color-brand-600: #c026d3;
+  --color-brand-700: #a21caf;
+  --color-brand-800: #86198f;
+  --color-brand-900: #701a75;
+  --color-brand-950: #4a044e;
+}
+:root[data-theme="neon"] .bg-brand-600 {
+  box-shadow: 0 0 14px -2px color-mix(in srgb, var(--color-brand-500) 70%, transparent);
+}
+html.dark[data-theme="neon"] .shadow-md,
+html.dark[data-theme="neon"] .shadow-lg {
+  box-shadow: 0 0 24px -6px color-mix(in srgb, var(--color-brand-500) 60%, transparent);
+}
+
+/* Pastel Lembut: violet kalem + sudut ekstra membulat */
+:root[data-theme="pastel"] {
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-800: #5b21b6;
+  --color-brand-900: #4c1d95;
+  --color-brand-950: #2e1065;
+}
+:root[data-theme="pastel"] .rounded-lg {
+  border-radius: 0.75rem;
+}
+:root[data-theme="pastel"] .rounded-xl {
+  border-radius: 1.25rem;
+}
+:root[data-theme="pastel"] .rounded-2xl {
+  border-radius: 1.75rem;
+}
+
+/* Retro Terminal: hijau fosfor CRT */
+:root[data-theme="terminal"] {
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+  --color-brand-950: #022c22;
+}
+
+/* Samudra: biru klasik aplikasi SaaS */
+:root[data-theme="ocean"] {
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+  --color-brand-950: #172554;
+}

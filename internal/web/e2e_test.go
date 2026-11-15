@@ -1745,6 +1745,49 @@ func TestE2EAdminSettingsAndDetail(t *testing.T) {
 	}
 }
 
+// ---- setting tema toko: simpan, shell membawa data-theme, validasi ----
+
+func TestE2EStoreTheme(t *testing.T) {
+	_, ts, d := testServer(t)
+	seedUser(t, d, "boss@uji.id", "adminpass1", "admin")
+	admin := loginCookie(t, ts, "boss@uji.id", "adminpass1")
+	acsrf := csrfOf(t, admin, ts, "/admin")
+
+	// tema tidak valid ditolak
+	res := doPostCSRF(t, admin, ts.URL+"/admin/setting/theme", `{"theme":"hacker-purple"}`, acsrf)
+	if res.StatusCode != http.StatusFound || !strings.Contains(res.Header.Get("Location"), "err=") {
+		t.Errorf("tema ngawur = %d %s", res.StatusCode, res.Header.Get("Location"))
+	}
+
+	// simpan tema brutalism → tersimpan, shell + props halaman membawanya
+	if res := doPostCSRF(t, admin, ts.URL+"/admin/setting/theme", `{"theme":"brutalism"}`, acsrf); res.StatusCode != http.StatusFound {
+		t.Fatalf("simpan tema = %d", res.StatusCode)
+	}
+	if got := getSetting(d, "brand.theme"); got != "brutalism" {
+		t.Errorf("brand.theme = %q, mau brutalism", got)
+	}
+	page := doPage(t, admin, ts.URL+"/admin/setting")
+	if got := prop(t, page)["theme"]; got != "brutalism" {
+		t.Errorf("props theme = %v, mau brutalism", got)
+	}
+	// shell HTML memuat atribut data-theme (diterapkan sebelum paint)
+	shell := doGetRes(t, newClient(), ts.URL+"/", nil)
+	b, _ := io.ReadAll(shell.Body)
+	if !strings.Contains(string(b), `data-theme="brutalism"`) {
+		t.Error("shell tanpa data-theme brutalism")
+	}
+
+	// kembali ke bawaan → atribut kosong
+	if res := doPostCSRF(t, admin, ts.URL+"/admin/setting/theme", `{"theme":""}`, acsrf); res.StatusCode != http.StatusFound {
+		t.Fatalf("reset tema = %d", res.StatusCode)
+	}
+	shell = doGetRes(t, newClient(), ts.URL+"/", nil)
+	b, _ = io.ReadAll(shell.Body)
+	if strings.Contains(string(b), `data-theme="brutalism"`) {
+		t.Error("shell masih memuat tema lama")
+	}
+}
+
 // ---- verifikasi email: OTP saat daftar, gerbang dashboard & checkout ----
 
 func TestE2EEmailVerification(t *testing.T) {

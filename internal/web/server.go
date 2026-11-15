@@ -160,6 +160,7 @@ func (s *Server) routes() {
 	m.Handle("POST /admin/setting/smtp", s.guardAdmin(s.adminSettingSMTP))
 	m.Handle("POST /admin/setting/smtp/test", s.guardAdmin(s.adminSettingSMTPTest))
 	m.Handle("POST /admin/setting/brand", s.guardAdmin(s.adminSettingBrand))
+	m.Handle("POST /admin/setting/theme", s.guardAdmin(s.adminSettingTheme))
 	m.Handle("POST /admin/setting/content", s.guardAdmin(s.adminSettingContent))
 	m.Handle("POST /admin/setting/seo", s.guardAdmin(s.adminSettingSEO))
 	m.Handle("POST /admin/produk/{id}/toggle", s.guardAdmin(s.adminProductToggle))

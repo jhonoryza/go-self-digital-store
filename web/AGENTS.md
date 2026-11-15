@@ -20,6 +20,10 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
   manual** di callback children (callback kustom menonaktifkan layout bawaan
   App); `CsrfSync` menyinkronkan token CSRF props → interceptor.
 - `src/types.ts` — SharedProps + helper `rupiah` (cermin helper Go).
+- Tema toko: `SharedProps.theme` disinkronkan `ThemeSync` (app.tsx) ke
+  `<html data-theme>`; 5 tema + bawaan didefinisikan sebagai override
+  `--color-brand-*` + estetika di `src/css/app.css` (brutalism/neon/pastel/
+  terminal/ocean) — kontras brand-600 dijaga >= 4.5:1 vs putih di kedua mode.
 - `src/components/ThemeToggle.tsx` — toggle gelap/terang (localStorage
   `theme`); **default gelap** diputuskan script inline di shell (Go
   `rootTemplate` + `web/index.html`) sebelum paint.

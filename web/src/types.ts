@@ -13,6 +13,7 @@ export interface SharedProps extends PageProps {
   csrf_token?: string;
   flash?: { ok?: string; err?: string };
   app_name?: string;
+  theme?: string; // tema toko pilihan admin ("" = bawaan; lihat app.css data-theme)
   brand_logo?: string; // URL logo toko dari bucket R2 (halaman setting admin)
   dev_login?: boolean; // pintu dev /dev/login aktif (STORE_DEV_LOGIN=1)
 }

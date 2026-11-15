@@ -5,6 +5,7 @@ package web
 // tabel settings (key-value) agar bisa diubah tanpa deploy.
 
 import (
+	"database/sql"
 	"net/http"
 	"path"
 	"strings"
@@ -50,6 +51,36 @@ func (s *Server) brandLogoURL(r *http.Request) string {
 	return s.imageURL(r, key)
 }
 
+// storeThemes daftar tema tampilan toko yang valid (kosong = bawaan).
+var storeThemes = map[string]bool{
+	"": true, "brutalism": true, "neon": true, "pastel": true, "terminal": true, "ocean": true,
+}
+
+// storeTheme baca tema toko dari settings; nilai di luar daftar = bawaan.
+func storeTheme(db *sql.DB) string {
+	t := getSetting(db, "brand.theme")
+	if storeThemes[t] {
+		return t
+	}
+	return ""
+}
+
+// adminSettingTheme POST /admin/setting/theme — pilih tema tampilan toko.
+func (s *Server) adminSettingTheme(w http.ResponseWriter, r *http.Request, u auth.User) {
+	t := r.PostFormValue("theme")
+	if !storeThemes[t] {
+		s.flashErr(w, r, "/admin/setting", "Tema tidak dikenal.")
+		return
+	}
+	setSetting(s.DB, "brand.theme", t)
+	audit(s.DB, "setting.theme", t, "oleh "+u.Email)
+	if t == "" {
+		s.flashOK(w, r, "/admin/setting", "Tema dikembalikan ke bawaan.")
+		return
+	}
+	s.flashOK(w, r, "/admin/setting", "Tema "+t+" disimpan.")
+}
+
 // adminSettingPage GET /admin/setting — satu halaman, empat seksi.
 func (s *Server) adminSettingPage(w http.ResponseWriter, r *http.Request, u auth.User) {
 	smtpCfg := s.smtpFromSettings()
@@ -74,6 +105,7 @@ func (s *Server) adminSettingPage(w http.ResponseWriter, r *http.Request, u auth
 			"has_pass": boolStr(smtpCfg.Pass != ""),
 		},
 		"brand":          map[string]any{"name": brandName, "logo": s.brandLogoURL(r)},
+		"theme":          storeTheme(s.DB),
 		"content":        map[string]string{"privacy": contentPrivacy, "terms": contentTerms},
 		"seo":            seo,
 		"images_enabled": s.Images != nil,

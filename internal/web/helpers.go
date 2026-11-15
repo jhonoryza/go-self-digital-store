@@ -88,6 +88,11 @@ func (s *Server) Page(w http.ResponseWriter, r *http.Request, component string, 
 	}
 	props["dev_login"] = s.Cfg.DevLogin // navbar menampilkan pintasan /dev/login
 	props["app_name"] = s.appName()
+	// tema toko: shell Go membaca lewat template datum (tanpa FOUC), React
+	// menyinkronkan ulang dari props (mode shell statis CF Pages)
+	theme := storeTheme(s.DB)
+	r = r.WithContext(inertia.SetTemplateDatum(r.Context(), "theme", theme))
+	props["theme"] = theme
 	if logo := s.brandLogoURL(r); logo != "" {
 		props["brand_logo"] = logo
 	}

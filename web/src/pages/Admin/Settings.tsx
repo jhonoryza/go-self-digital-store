@@ -1,5 +1,5 @@
 import { router, usePage } from "@inertiajs/react";
-import { FileText, ImageIcon, Mail, Search } from "lucide-react";
+import { Check, FileText, ImageIcon, Mail, Palette, Search } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import AdminLayout from "../../components/AdminLayout";
 import type { SharedProps } from "../../types";
@@ -9,12 +9,23 @@ interface Props extends SharedProps {
   brand: { name: string; logo: string };
   content: { privacy: string; terms: string };
   seo: Record<string, string>;
+  theme: string;
   images_enabled: boolean;
 }
 
+// Daftar tema tampilan toko; warna cermin override di web/src/css/app.css.
+const THEMES = [
+  { id: "", label: "Bawaan", desc: "Hijau toko - tampilan default", swatch: "#277758", bg: "#f0f9f4" },
+  { id: "brutalism", label: "Brutalism", desc: "Sudut tegas, garis tebal, bayangan offset", swatch: "#4d7c0f", bg: "#f7fee7" },
+  { id: "neon", label: "Neon Cyber", desc: "Fuchsia menyala dengan efek glow", swatch: "#c026d3", bg: "#fdf4ff" },
+  { id: "pastel", label: "Pastel Lembut", desc: "Violet kalem, sudut ekstra membulat", swatch: "#7c3aed", bg: "#f5f3ff" },
+  { id: "terminal", label: "Retro Terminal", desc: "Hijau fosfor layar CRT", swatch: "#059669", bg: "#ecfdf5" },
+  { id: "ocean", label: "Samudra", desc: "Biru klasik aplikasi SaaS", swatch: "#2563eb", bg: "#eff6ff" },
+] as const;
+
 // Halaman Setting: SMTP runtime, brand (nama + logo), konten kebijakan,
 // dan SEO per halaman. Semua tersimpan di tabel settings, aktif tanpa deploy.
-export default function AdminSettings({ smtp, brand, content, seo, images_enabled }: Props) {
+export default function AdminSettings({ smtp, brand, content, seo, theme, images_enabled }: Props) {
   const logoRef = useRef<HTMLInputElement>(null);
   const [seoData, setSeoData] = useState<Record<string, string>>({
     "seo.home.title": seo["seo.home.title"] ?? "",
@@ -101,6 +112,52 @@ export default function AdminSettings({ smtp, brand, content, seo, images_enable
             </button>
           </div>
         </form>
+      </section>
+
+      {/* Tema tampilan */}
+      <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="mb-1 flex items-center gap-2 font-semibold">
+          <Palette className="h-4 w-4 text-brand-600 dark:text-brand-400" /> Tema tampilan toko
+        </h2>
+        <p className="mb-4 text-sm text-zinc-500">
+          Berlaku untuk seluruh halaman pengunjung; pengunjung tetap bisa memilih mode gelap/terang.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {THEMES.map((t) => {
+            const aktif = (theme || "") === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => router.post("/admin/setting/theme", { theme: t.id })}
+                aria-pressed={aktif}
+                className={`rounded-xl border-2 p-3 text-left transition ${
+                  aktif
+                    ? "border-brand-600 bg-brand-50 dark:border-brand-500 dark:bg-brand-950/40"
+                    : "border-zinc-200 hover:border-brand-400 dark:border-zinc-800 dark:hover:border-brand-600"
+                }`}
+              >
+                <span
+                  className="mb-3 flex h-16 items-end gap-1.5 rounded-lg border border-black/10 p-2 dark:border-white/10"
+                  style={{ backgroundColor: t.bg }}
+                >
+                  <span className="h-2 w-10 rounded-full" style={{ backgroundColor: t.swatch }} />
+                  <span className="h-2 w-6 rounded-full opacity-50" style={{ backgroundColor: t.swatch }} />
+                  <span className="ml-auto h-5 w-12 rounded-md" style={{ backgroundColor: t.swatch }} />
+                </span>
+                <span className="flex items-center justify-between">
+                  <span className="font-semibold">{t.label}</span>
+                  {aktif && (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white">
+                      <Check className="h-3 w-3" aria-hidden="true" />
+                    </span>
+                  )}
+                </span>
+                <span className="mt-0.5 block text-xs text-zinc-500">{t.desc}</span>
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       {/* Konten kebijakan */}

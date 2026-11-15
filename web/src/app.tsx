@@ -30,6 +30,16 @@ async function resolve(name: string, _page?: Page<SharedPageProps>): Promise<Pag
   return mod.default;
 }
 
+// Sinkronkan tema toko pilihan admin ke <html data-theme> (shell statis CF
+// Pages tidak bisa menyuntik atribut ini dari server).
+function ThemeSync() {
+  const { props } = usePage<SharedProps>();
+  useEffect(() => {
+    document.documentElement.dataset.theme = props.theme ?? "";
+  }, [props.theme]);
+  return null;
+}
+
 // Sinkronkan token CSRF dari props halaman (berubah tiap render).
 function CsrfSync() {
   const { props } = usePage<SharedProps>();
@@ -57,6 +67,7 @@ createInertiaApp<SharedProps>({
           return (
             <>
               <CsrfSync />
+              <ThemeSync />
               {layout(<Page {...pageProps} />)}
             </>
           );

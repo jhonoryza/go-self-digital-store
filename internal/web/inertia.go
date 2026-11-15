@@ -29,7 +29,7 @@ const (
 // rootTemplate shell HTML yang dirender Go; aset diisi lewat template data
 // (appJS/appCSS) agar tidak terikat bentuk manifest.
 const rootTemplate = `<!DOCTYPE html>
-<html lang="id" class="dark">
+<html lang="id" class="dark" data-theme="{{ .theme }}">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -106,6 +106,7 @@ func NewInertia(cfg config.Config) (*inertia.Inertia, string) {
 		log.Fatalf("inertia: %v", err)
 	}
 	i.ShareTemplateData("appName", cfg.AppName)
+	i.ShareTemplateData("theme", "") // ditimpa per-request di Page()
 
 	assets := resolveAssets()
 	i.ShareTemplateData("appJS", assets.JS)

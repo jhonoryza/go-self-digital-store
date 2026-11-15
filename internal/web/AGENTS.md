@@ -27,6 +27,8 @@ request asing ditolak sebelum di-buffer.
 | `delivery.go` | onOrderPaid (assign kunci RETURNING, email produk), `/dl` ber-token, remindPending, `Maintain()` |
 | `tickets.go` | tiket user: list/buat/balas; status open→answered→closed |
 | `admin.go` | konsol admin: stats, users, orders (lunas manual/resend), produk CRUD multipart + stok kunci, maillog, tiket admin, gateway config/activate (props providers membawa `configured` = ada cfg tersimpan) |
+| tema toko | setting `brand.theme` (whitelist di `storeThemes`) → `Page()` menyuntik template datum `theme` (shell Go `data-theme`, tanpa FOUC) + prop `theme`; React `ThemeSync` menyinkronkan ulang utk shell statis; CSS override di `web/src/css/app.css` |
+| `settings.go` | SMTP runtime, brand (nama+logo), **tema toko** (POST `/admin/setting/theme`), konten kebijakan, SEO per halaman |
 | `server_test.go` | test integrasi (bootstrap `testServer`: SQLite temp-dir nyata + httptest) |
 | `e2e_test.go` | test E2E per fitur (publik, auth, profil, checkout, webhook, unduhan, tiket, admin, middleware) |
 | `dev.go` | dev login-as (`/dev/login`, hanya bila `STORE_DEV_LOGIN=1`; route tidak terdaftar bila mati) |
