@@ -1,7 +1,8 @@
-import { Head, Link, router } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react";
 import { ChevronDown, Loader2, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import GuestLayout from "../../components/GuestLayout";
+import { useInfiniteList } from "../../lib/infinite";
 import ProductThumb from "../../components/ProductThumb";
 import { rupiah, type CatalogFilters, type Product, type SharedProps } from "../../types";
 
@@ -56,50 +57,14 @@ export default function Products({
   // panel tersembunyi secara default; terbuka otomatis saat ada filter aktif
   const [filterOpen, setFilterOpen] = useState(adaFilter);
 
-  // ---- infinite scroll ----
-  // Kartu terakumulasi di state klien; tiap sentinel terlihat, halaman
-  // berikutnya dimuat via partial reload (only) lalu di-append. Full
-  // navigation (ganti filter/sort/URL ?page=N) mengganti isi state.
-  const sig = JSON.stringify(filters);
-  const [loaded, setLoaded] = useState({ sig, page, items: productsProp });
-  const [busy, setBusy] = useState(false);
-  const loadingRef = useRef(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setLoaded((prev) => {
-      if (prev.sig !== sig) return { sig, page, items: productsProp }; // filter/sort berganti
-      if (page === prev.page + 1) return { ...prev, page, items: [...prev.items, ...productsProp] }; // hasil scroll
-      if (page !== prev.page) return { sig, page, items: productsProp }; // lompatan (back/forward/tautan ?page=N)
-      return prev;
-    });
-  }, [sig, page, productsProp]);
-
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((e) => e.isIntersecting) || loadingRef.current) return;
-        if (loaded.page >= last_page) return;
-        loadingRef.current = true;
-        setBusy(true);
-        router.reload({
-          only: ["products", "page", "last_page", "total"],
-          data: { page: loaded.page + 1 },
-          onFinish: () => {
-            loadingRef.current = false;
-            setBusy(false);
-          },
-        });
-      },
-      { rootMargin: "600px 0px" }, // mulai memuat sebelum benar-benar mentok bawah
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [loaded.page, last_page]);
-
-  const items = loaded.items;
+  // infinite scroll via hook bersama (lihat lib/infinite.ts)
+  const { items, busy, sentinelRef } = useInfiniteList(
+    productsProp,
+    page,
+    last_page,
+    JSON.stringify(filters),
+    ["products", "page", "last_page", "total"],
+  );
   const semuaTampil = total > 0 && items.length >= total;
   const from = total === 0 ? 0 : 1;
 

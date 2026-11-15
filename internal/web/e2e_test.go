@@ -1748,6 +1748,115 @@ func TestE2EAdminSettingsAndDetail(t *testing.T) {
 	}
 }
 
+// ---- konsol: filter/search/sort/paginasi admin produk & users ----
+
+func TestE2EAdminLists(t *testing.T) {
+	_, ts, d := testServer(t)
+	seedUser(t, d, "boss@uji.id", "adminpass1", "admin")
+	admin := loginCookie(t, ts, "boss@uji.id", "adminpass1")
+
+	// 15 produk: 3 kategori x 2 jenis, harga bertingkat; satu nonaktif
+	insert := func(slug, title, category, typ string, price int, active int) {
+		_, err := d.Exec(`INSERT INTO products (slug, title, description, price, type, active, category) VALUES (?,?,?,?,?,?,?)`,
+			slug, title, "deskripsi "+slug, price, typ, active, category)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for i := 1; i <= 15; i++ {
+		typ := "file"
+		if i%2 == 0 {
+			typ = "key"
+		}
+		active := 1
+		if i == 15 {
+			active = 0 // satu produk nonaktif utk filter status
+		}
+		insert(fmt.Sprintf("adm-%02d", i), fmt.Sprintf("Produk Admin %02d", i),
+			[]string{"Kategori-A", "Kategori-B", "Kategori-C"}[i%3], typ, i*10000, active)
+	}
+
+	// 14 pengguna tambahan: bervariasi role & verifikasi
+	for i := 1; i <= 14; i++ {
+		role := "user"
+		verified := "datetime('now')"
+		if i%7 == 0 {
+			role = "admin"
+		}
+		if i%2 == 1 {
+			verified = "NULL"
+		}
+		if _, err := d.Exec(`INSERT INTO users (email, name, password, role, email_verified_at) VALUES (?,?,?,?,`+verified+`)`,
+			fmt.Sprintf("user%02d@uji.id", i), fmt.Sprintf("Pengguna %02d", i), "x", role); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// ---- admin/produk ----
+	// pencarian
+	page := doPage(t, admin, ts.URL+"/admin/produk?q=Admin+07")
+	if got := prop(t, page)["total"].(float64); got != 1 {
+		t.Errorf("q=Admin 07 total = %v, mau 1", got)
+	}
+	// filter kategori + jenis
+	page = doPage(t, admin, ts.URL+"/admin/produk?kategori=Kategori-A&type=key")
+	if got := prop(t, page)["total"].(float64); got != 2 { // i=1,4,7,10,13 → A; genap key: 4,10
+		t.Errorf("kategori+type total = %v, mau 2", got)
+	}
+	// filter status nonaktif
+	page = doPage(t, admin, ts.URL+"/admin/produk?status=nonaktif")
+	if got := prop(t, page)["total"].(float64); got != 1 {
+		t.Errorf("status=nonaktif total = %v, mau 1", got)
+	}
+	// urutan termurah → produk pertama termurah (adm-01, 10rb)
+	page = doPage(t, admin, ts.URL+"/admin/produk?sort=termurah")
+	first := prop(t, page)["products"].([]any)[0].(map[string]any)
+	if first["slug"] != "adm-01" {
+		t.Errorf("sort termurah pertama = %v, mau adm-01", first["slug"])
+	}
+	// paginasi: 15 produk → 2 halaman; page 2 berisi 3
+	page = doPage(t, admin, ts.URL+"/admin/produk")
+	if prop(t, page)["last_page"].(float64) != 2 {
+		t.Errorf("last_page = %v, mau 2", prop(t, page)["last_page"])
+	}
+	page = doPage(t, admin, ts.URL+"/admin/produk?page=2")
+	if got := len(prop(t, page)["products"].([]any)); got != 3 {
+		t.Errorf("page 2 = %d produk, mau 3", got)
+	}
+
+	// ---- admin/users ----
+	// pencarian
+	page = doPage(t, admin, ts.URL+"/admin/users?q=user07")
+	if got := prop(t, page)["total"].(float64); got != 1 {
+		t.Errorf("q=user07 total = %v, mau 1", got)
+	}
+	// filter role admin (seed boss + user07 + user14)
+	page = doPage(t, admin, ts.URL+"/admin/users?role=admin")
+	if got := prop(t, page)["total"].(float64); got != 3 {
+		t.Errorf("role=admin total = %v, mau 3", got)
+	}
+	// filter belum verifikasi (ganjil: user01..13 = 7 orang)
+	page = doPage(t, admin, ts.URL+"/admin/users?verified=belum")
+	if got := prop(t, page)["total"].(float64); got != 7 {
+		t.Errorf("verified=belum total = %v, mau 7", got)
+	}
+	// urutan email A-Z → user01 teratas (boss@ di atasnya? email 'boss@' < 'user01@')
+	page = doPage(t, admin, ts.URL+"/admin/users?sort=email&role=user")
+	first = prop(t, page)["users"].([]any)[0].(map[string]any)
+	if first["email"] != "user01@uji.id" {
+		t.Errorf("sort email pertama = %v, mau user01@uji.id", first["email"])
+	}
+	// paginasi: 15 users (14 + boss) → 2 halaman; page 2 berisi 3
+	page = doPage(t, admin, ts.URL+"/admin/users")
+	if prop(t, page)["last_page"].(float64) != 2 {
+		t.Errorf("users last_page = %v, mau 2", prop(t, page)["last_page"])
+	}
+	page = doPage(t, admin, ts.URL+"/admin/users?page=2")
+	if got := len(prop(t, page)["users"].([]any)); got != 3 {
+		t.Errorf("users page 2 = %d, mau 3", got)
+	}
+}
+
 // ---- setting tema toko: simpan, shell membawa data-theme, validasi ----
 
 func TestE2EStoreTheme(t *testing.T) {

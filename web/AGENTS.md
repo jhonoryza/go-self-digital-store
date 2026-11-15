@@ -31,6 +31,10 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
   Link2) dari lucide-react; satu sumber untuk seluruh katalog.
 - `src/pages/Dev/LoginAs.tsx` — masuk sebagai akun mana pun (hanya bila
   prop `dev_login` aktif; route Go tidak terdaftar tanpa `STORE_DEV_LOGIN=1`).
+- `src/lib/infinite.ts` — hook `useInfiniteList(itemsProp, page, lastPage, sig, only)`:
+  akumulasi kartu antar halaman untuk infinite scroll (sig filter berubah =
+  reset, page+1 = append); dipakai katalog publik + konsol admin produk/users
+  (server tetap ber-paginasi 12/halaman, partial reload `?page=N+1`).
 - `src/lib/cart.ts` — keranjang localStorage (event `cart-change`); server
   memvalidasi ulang harga saat checkout. `CartItem.image_url` snapshot gambar.
 - `src/components/BottomNav.tsx` — bar navigasi bawah ala aplikasi bersama

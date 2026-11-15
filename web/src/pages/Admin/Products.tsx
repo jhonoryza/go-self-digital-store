@@ -1,7 +1,8 @@
 import { router, useForm } from "@inertiajs/react";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, Loader2, RotateCcw, Search, X } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import AdminLayout from "../../components/AdminLayout";
+import { useInfiniteList } from "../../lib/infinite";
 import { rupiah, type ProductImage, type SharedProps } from "../../types";
 
 interface Product {
@@ -23,19 +24,52 @@ interface Product {
   tags?: string[];
 }
 
+interface Filters {
+  q?: string;
+  kategori?: string;
+  type?: string;
+  status?: string;
+  sort?: string;
+}
+
 interface Props extends SharedProps {
   products: Product[];
   // peta product_id (string) -> daftar gambar dari bucket R2
   images: Record<string, ProductImage[]>;
+  page: number;
+  last_page: number;
+  total: number;
+  categories?: string[];
+  filters?: Filters;
 }
+
+const SORTS: Record<string, string> = {
+  terbaru: "Terbaru",
+  terlama: "Terlama",
+  termurah: "Harga termurah",
+  termahal: "Harga termahal",
+  nama: "Nama A-Z",
+};
 
 const MAX_IMAGES = 5;
 const MAX_IMAGE_BYTES = 2 << 20;
 
-export default function AdminProducts({ products, images }: Props) {
+export default function AdminProducts({ products: rawProducts, images, page, last_page, total, categories: rawCategories, filters = {} }: Props) {
   const [editing, setEditing] = useState<number | null>(null); // id produk yg form-nya terbuka
   const [showCreate, setShowCreate] = useState(false);
   const createForm = useRef<HTMLInputElement>(null);
+
+  // daftar terakumulasi (infinite scroll) + toolbar filter
+  const products = rawProducts ?? [];
+  const categories = rawCategories ?? [];
+  const adaFilter = Boolean(filters.q || filters.kategori || filters.type || filters.status);
+  const { items, busy, sentinelRef } = useInfiniteList(
+    products,
+    page,
+    last_page,
+    JSON.stringify(filters),
+    ["products", "page", "last_page", "total"],
+  );
 
   return (
     <div className="space-y-6">
@@ -49,6 +83,66 @@ export default function AdminProducts({ products, images }: Props) {
         </button>
       </div>
 
+      {/* toolbar cari + filter + urut: satu form GET, server yang menyaring */}
+      <form
+        method="get"
+        action="/admin/produk"
+        className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="lg:col-span-2">
+            <label htmlFor="q" className="mb-1 block text-xs font-medium text-zinc-500">Cari nama / slug</label>
+            <input id="q" name="q" type="search" defaultValue={filters.q || ""} placeholder="Cari produk…"
+              className="w-full rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800" />
+          </div>
+          <div>
+            <label htmlFor="kategori" className="mb-1 block text-xs font-medium text-zinc-500">Kategori</label>
+            <select id="kategori" name="kategori" defaultValue={filters.kategori || ""}
+              className="w-full rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800">
+              <option value="">Semua</option>
+              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="type" className="mb-1 block text-xs font-medium text-zinc-500">Jenis</label>
+            <select id="type" name="type" defaultValue={filters.type || ""}
+              className="w-full rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800">
+              <option value="">Semua</option>
+              <option value="file">File</option>
+              <option value="key">Key</option>
+              <option value="link">Link</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="status" className="mb-1 block text-xs font-medium text-zinc-500">Status</label>
+            <select id="status" name="status" defaultValue={filters.status || ""}
+              className="w-full rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800">
+              <option value="">Semua</option>
+              <option value="aktif">Aktif</option>
+              <option value="nonaktif">Nonaktif</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="sort" className="mb-1 block text-xs font-medium text-zinc-500">Urutkan</label>
+            <select id="sort" name="sort" defaultValue={filters.sort || "terbaru"}
+              className="w-full rounded-lg border-zinc-300 text-sm dark:border-zinc-700 dark:bg-zinc-800">
+              {Object.entries(SORTS).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <button type="submit" className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">
+            <Search className="h-4 w-4" aria-hidden="true" /> Terapkan
+          </button>
+          {adaFilter && (
+            <a href="/admin/produk" className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Reset
+            </a>
+          )}
+          <span className="ml-auto text-sm text-zinc-500">{total} produk</span>
+        </div>
+      </form>
+
       {showCreate && (
         <ProductForm
           key="create"
@@ -59,7 +153,7 @@ export default function AdminProducts({ products, images }: Props) {
       )}
 
       <div className="space-y-4">
-        {(products ?? []).map((p) => (
+        {items.map((p) => (
           <div key={p.id} className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex flex-wrap items-center justify-between gap-3 p-4">
               <div className="min-w-0">
@@ -104,11 +198,19 @@ export default function AdminProducts({ products, images }: Props) {
             )}
           </div>
         ))}
-        {(products ?? []).length === 0 && (
+        {items.length === 0 && (
           <p className="rounded-xl border border-dashed border-zinc-300 p-8 text-center text-zinc-500 dark:border-zinc-700">
-            Belum ada produk - klik “Produk baru”.
+            {adaFilter ? "Tidak ada produk yang cocok dengan filter." : "Belum ada produk - klik “Produk baru”."}
           </p>
         )}
+        <div ref={sentinelRef} aria-hidden="true" className="h-1" />
+        <div className="flex justify-center">
+          {busy && (
+            <p className="flex items-center gap-2 text-sm text-zinc-500">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Memuat produk lain…
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

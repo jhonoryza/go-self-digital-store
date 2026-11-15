@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	inertia "github.com/romsar/gonertia/v3"
@@ -71,8 +72,64 @@ func (s *Server) adminDashboard(w http.ResponseWriter, r *http.Request, u auth.U
 }
 
 // adminUsers GET /admin/users — daftar akun.
+// adminUserSorts mapping urutan konsol pengguna.
+var adminUserSorts = map[string]string{
+	"terbaru": "created_at DESC, id DESC",
+	"terlama": "created_at ASC, id ASC",
+	"nama":    "name COLLATE NOCASE ASC",
+	"email":   "email COLLATE NOCASE ASC",
+}
+
+// adminUsers GET /admin/users — daftar pengguna dengan pencarian email/nama,
+// filter role/verifikasi, urutan, dan paginasi 12/halaman. Parameter:
+// q, role, verified, sort, page.
 func (s *Server) adminUsers(w http.ResponseWriter, r *http.Request, u auth.User) {
-	rows, err := s.DB.Query(`SELECT id, email, name, role, COALESCE(email_verified_at,''), created_at FROM users ORDER BY id DESC LIMIT 200`)
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	role := r.URL.Query().Get("role")
+	verified := r.URL.Query().Get("verified")
+	sort := r.URL.Query().Get("sort")
+	if _, ok := adminUserSorts[sort]; !ok {
+		sort = "terbaru"
+	}
+
+	var conds []string
+	var args []any
+	if q != "" {
+		esc := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(q)
+		conds = append(conds, `(email LIKE ? ESCAPE '\' OR name LIKE ? ESCAPE '\')`)
+		args = append(args, "%"+esc+"%", "%"+esc+"%")
+	}
+	switch role {
+	case "admin", "user":
+		conds = append(conds, `role=?`)
+		args = append(args, role)
+	}
+	switch verified {
+	case "sudah":
+		conds = append(conds, `email_verified_at IS NOT NULL`)
+	case "belum":
+		conds = append(conds, `email_verified_at IS NULL`)
+	}
+	where := ""
+	if len(conds) > 0 {
+		where = " WHERE " + strings.Join(conds, " AND ")
+	}
+
+	const adminPerPage = 12
+	var total int
+	s.DB.QueryRow(`SELECT COUNT(*) FROM users`+where, args...).Scan(&total)
+	lastPage := (total + adminPerPage - 1) / adminPerPage
+	if lastPage < 1 {
+		lastPage = 1
+	}
+	page := 1
+	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p >= 1 && p <= lastPage {
+		page = p
+	}
+
+	rows, err := s.DB.Query(`SELECT id, email, name, role, COALESCE(email_verified_at,''), created_at FROM users`+where+
+		` ORDER BY `+adminUserSorts[sort]+` LIMIT ? OFFSET ?`,
+		append(append([]any{}, args...), adminPerPage, (page-1)*adminPerPage)...)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, "kesalahan server")
 		return
@@ -86,7 +143,16 @@ func (s *Server) adminUsers(w http.ResponseWriter, r *http.Request, u auth.User)
 			users = append(users, map[string]any{"id": id, "email": email, "name": name, "role": role, "verified": verified != "", "created_at": created})
 		}
 	}
-	s.Page(w, r, "Admin/Users", inertia.Props{"users": users, "flash": flashFromQuery(r)})
+	s.Page(w, r, "Admin/Users", inertia.Props{
+		"users":     users,
+		"page":      page,
+		"last_page": lastPage,
+		"total":     total,
+		"filters": map[string]any{
+			"q": q, "role": role, "verified": verified, "sort": sort,
+		},
+		"flash": flashFromQuery(r),
+	})
 }
 
 // adminOrders GET /admin/orders — seluruh order.
@@ -163,10 +229,83 @@ type productAdmin struct {
 	KeyCount int    `json:"key_count"`
 }
 
+// adminProductSorts mapping urutan konsol produk (id sebagai pemecah seri).
+var adminProductSorts = map[string]string{
+	"terbaru":  "p.created_at DESC, p.id DESC",
+	"terlama":  "p.created_at ASC, p.id ASC",
+	"termurah": "p.price ASC, p.id DESC",
+	"termahal": "p.price DESC, p.id DESC",
+	"nama":     "p.title COLLATE NOCASE ASC",
+}
+
+// adminProducts GET /admin/produk — daftar produk dengan pencarian nama/slug,
+// filter kategori/jenis/status, urutan, dan paginasi 12/halaman (klien
+// memakai infinite scroll). Parameter: q, kategori, type, status, sort, page.
 func (s *Server) adminProducts(w http.ResponseWriter, r *http.Request, u auth.User) {
-	rows, err := s.DB.Query(`SELECT id, slug, title, description, price, type, featured, active, file_path, file_name, ext_url, meta_title, meta_description, category, tags,
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	kategori := strings.TrimSpace(r.URL.Query().Get("kategori"))
+	typ := r.URL.Query().Get("type")
+	status := r.URL.Query().Get("status")
+	sort := r.URL.Query().Get("sort")
+	if _, ok := adminProductSorts[sort]; !ok {
+		sort = "terbaru"
+	}
+
+	var conds []string
+	var args []any
+	if q != "" {
+		esc := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(q)
+		conds = append(conds, `(p.title LIKE ? ESCAPE '\' OR p.slug LIKE ? ESCAPE '\')`)
+		args = append(args, "%"+esc+"%", "%"+esc+"%")
+	}
+	if kategori != "" {
+		conds = append(conds, `LOWER(p.category)=LOWER(?)`)
+		args = append(args, kategori)
+	}
+	switch typ {
+	case "file", "key", "link":
+		conds = append(conds, `p.type=?`)
+		args = append(args, typ)
+	}
+	switch status {
+	case "aktif":
+		conds = append(conds, `p.active=1`)
+	case "nonaktif":
+		conds = append(conds, `p.active=0`)
+	}
+	where := ""
+	if len(conds) > 0 {
+		where = " WHERE " + strings.Join(conds, " AND ")
+	}
+
+	const adminPerPage = 12
+	var total int
+	s.DB.QueryRow(`SELECT COUNT(*) FROM products p`+where, args...).Scan(&total)
+	lastPage := (total + adminPerPage - 1) / adminPerPage
+	if lastPage < 1 {
+		lastPage = 1
+	}
+	page := 1
+	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p >= 1 && p <= lastPage {
+		page = p
+	}
+
+	// opsi filter kategori dari seluruh produk (termasuk nonaktif)
+	var categories []string
+	if crows, err := s.DB.Query(`SELECT DISTINCT category FROM products WHERE category != '' ORDER BY category`); err == nil {
+		for crows.Next() {
+			var c string
+			if crows.Scan(&c) == nil {
+				categories = append(categories, c)
+			}
+		}
+		crows.Close()
+	}
+
+	rows, err := s.DB.Query(`SELECT p.id, p.slug, p.title, p.description, p.price, p.type, p.featured, p.active, p.file_path, p.file_name, p.ext_url, p.meta_title, p.meta_description, p.category, p.tags,
 		(SELECT COUNT(*) FROM license_keys k WHERE k.product_id=p.id AND k.order_item_id IS NULL)
-		FROM products p ORDER BY id DESC`)
+		FROM products p`+where+` ORDER BY `+adminProductSorts[sort]+` LIMIT ? OFFSET ?`,
+		append(append([]any{}, args...), adminPerPage, (page-1)*adminPerPage)...)
 	if err != nil {
 		jsonError(w, http.StatusInternalServerError, "kesalahan server")
 		return
@@ -187,7 +326,18 @@ func (s *Server) adminProducts(w http.ResponseWriter, r *http.Request, u auth.Us
 			})
 		}
 	}
-	s.Page(w, r, "Admin/Products", inertia.Props{"products": products, "images": s.allProductImages(r), "flash": flashFromQuery(r)})
+	s.Page(w, r, "Admin/Products", inertia.Props{
+		"products":   products,
+		"images":     s.allProductImages(r),
+		"page":       page,
+		"last_page":  lastPage,
+		"total":      total,
+		"categories": categories,
+		"filters": map[string]any{
+			"q": q, "kategori": kategori, "type": typ, "status": status, "sort": sort,
+		},
+		"flash": flashFromQuery(r),
+	})
 }
 
 // parseTagsForm ubah input tag dipisah koma/baris baru menjadi JSON array
