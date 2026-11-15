@@ -35,6 +35,7 @@ export interface Product {
   featured: boolean;
   category?: string; // kategori opsional (taksonomi)
   tags?: string[]; // tag opsional (taksonomi)
+  key_stock?: number; // sisa stok kunci (hanya type=key)
   image_url?: string; // gambar pertama (kartu katalog)
   meta_title?: string; // SEO opsional (form admin)
   meta_description?: string;
@@ -54,6 +55,15 @@ export interface CatalogFilters {
 export interface ProductImage {
   id: number;
   url: string;
+}
+
+// AdminProduct baris produk di konsol admin (produk + kolom operasional).
+export interface AdminProduct extends Product {
+  active: boolean;
+  file_path: string;
+  file_name: string;
+  ext_url: string;
+  key_count: number;
 }
 
 // format rupiah gaya Indonesia (cermin helper Go rupiah).

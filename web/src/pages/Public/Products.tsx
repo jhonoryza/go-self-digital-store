@@ -237,11 +237,18 @@ export default function Products({
                   <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">{p.description}</p>
                   <div className="mt-3 flex items-center justify-between">
                     <span className="font-bold text-brand-700 dark:text-brand-300">{rupiah(p.price)}</span>
-                    {p.featured && (
-                      <span className="rounded-full bg-brass-400/20 px-2 py-0.5 text-xs font-semibold text-brass-600 dark:text-brass-400">
-                        Unggulan
-                      </span>
-                    )}
+                    <span className="flex items-center gap-1.5">
+                      {p.type === "key" && p.key_stock !== undefined && (
+                        <span className={`text-xs font-medium ${p.key_stock === 0 ? "text-red-600" : "text-zinc-500"}`}>
+                          Stok {p.key_stock}
+                        </span>
+                      )}
+                      {p.featured && (
+                        <span className="rounded-full bg-brass-400/20 px-2 py-0.5 text-xs font-semibold text-brass-600 dark:text-brass-400">
+                          Unggulan
+                        </span>
+                      )}
+                    </span>
                   </div>
                 </Link>
               ))}

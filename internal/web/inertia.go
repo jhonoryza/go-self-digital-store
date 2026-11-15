@@ -48,6 +48,12 @@ const rootTemplate = `<!DOCTYPE html>
 {{ if .hmr }}<script type="module" src="{{ .hmrURL }}/@vite/client"></script>{{ end }}
 <link rel="stylesheet" href="{{ .appCSS }}"/>
 <script type="module" src="{{ .appJS }}"></script>
+{{ if .ogTitle }}<meta property="og:title" content="{{ .ogTitle }}"/>
+<meta property="og:description" content="{{ .ogDesc }}"/>
+<meta property="og:type" content="{{ .ogType }}"/>
+<meta property="og:site_name" content="{{ .appName }}"/>
+{{ if .ogURL }}<meta property="og:url" content="{{ .ogURL }}"/>{{ end }}
+{{ if .ogImage }}<meta property="og:image" content="{{ .ogImage }}"/>{{ end }}{{ end }}
 {{ .inertiaHead }}
 </head>
 <body>{{ .inertia }}</body>

@@ -4,7 +4,9 @@ package web
 // penyajian aset Vite untuk mode shell-Go.
 
 import (
+	"bytes"
 	"database/sql"
+	"fmt"
 	"net/http"
 	neturl "net/url"
 	"os"
@@ -21,7 +23,11 @@ import (
 // New bangun Server lengkap beserta rantai middleware:
 // recover -> secHeaders -> cors -> originCheck -> inertia -> mux.
 func New(db *sql.DB, cfg config.Config, ml *mail.Mailer, i *inertia.Inertia, version string) *Server { //nolint:revive
-	s := &Server{DB: db, Cfg: cfg, Mail: ml, I: i, Version: version, Images: newR2Store(cfg.R2)}
+	var imgs imageStore
+	if st := newR2Store(cfg.R2); st != nil {
+		imgs = st // hindari interface memegang *r2Store nil (typed-nil trap)
+	}
+	s := &Server{DB: db, Cfg: cfg, Mail: ml, I: i, Version: version, Images: imgs}
 	s.routes()
 	s.Mux = recover500(s.secHeaders(s.cors(s.originCheck(s.inertiaMiddleware(s.Mux)))))
 	return s
@@ -140,6 +146,9 @@ func (s *Server) routes() {
 	m.Handle("POST /pay/{order_no}", s.limited("checkout", http.HandlerFunc(s.payNow)))
 	m.Handle("POST /callback/payment", s.limited("callback", http.HandlerFunc(s.paymentCallback)))
 	m.Handle("GET /dl/{order_no}/{item}", s.limited("download", http.HandlerFunc(s.download)))
+	m.Handle("POST /produk/{slug}/ulasan", s.guardVerified(s.reviewStore))
+	m.Handle("GET /robots.txt", http.HandlerFunc(s.robotsTxt))
+	m.Handle("GET /sitemap.xml", http.HandlerFunc(s.sitemapXML))
 
 	// admin (role admin)
 	m.Handle("GET /admin", s.guardAdmin(s.adminDashboard))
@@ -178,6 +187,10 @@ func (s *Server) routes() {
 
 	// gambar produk dari bucket R2 (proxy bila tanpa domain publik)
 	m.HandleFunc("GET /images/{key...}", s.productImageProxy)
+
+	// catch-all GET terakhir: route GET tak dikenal → halaman 404 ber-Inertia.
+	// Pola spesifik tetap menang (presedensi mux) dan mismatch method tetap 405.
+	m.HandleFunc("GET /{path...}", s.notFoundPage)
 
 	s.Mux = m
 }
@@ -233,4 +246,83 @@ func (s *Server) authOnFail(target string, admin bool) func(http.ResponseWriter,
 		}
 		http.Redirect(w, r, target, http.StatusFound)
 	}
+}
+
+// robotsTxt aturan perayapan: area privat dilarang, sitemap diumumkan.
+func (s *Server) robotsTxt(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	fmt.Fprintf(w, `User-agent: *
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /pesanan
+Disallow: /tiket
+Disallow: /profil
+Disallow: /keranjang
+Disallow: /checkout
+Disallow: /pay
+Disallow: /dl/
+Disallow: /verify-email
+Disallow: /dev
+Disallow: /api
+
+Sitemap: %s/sitemap.xml
+`, s.publicOrigin(r))
+}
+
+// sitemapXML peta situs dinamis: halaman publik + seluruh produk aktif.
+func (s *Server) sitemapXML(w http.ResponseWriter, r *http.Request) {
+	base := s.publicOrigin(r)
+	var sb strings.Builder
+	sb.WriteString("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n")
+	for _, p := range []string{"/", "/produk", "/ketentuan", "/privacy"} {
+		fmt.Fprintf(&sb, "<url><loc>%s%s</loc></url>\n", base, p)
+	}
+	if rows, err := s.DB.Query(`SELECT slug, updated_at FROM products WHERE active=1 ORDER BY id`); err == nil {
+		for rows.Next() {
+			var slug, updated string
+			if rows.Scan(&slug, &updated) == nil && len(updated) >= 10 {
+				fmt.Fprintf(&sb, "<url><loc>%s/produk/%s</loc><lastmod>%s</lastmod></url>\n", base, slug, updated[:10])
+			}
+		}
+		rows.Close()
+	}
+	sb.WriteString("</urlset>\n")
+	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	_, _ = w.Write([]byte(sb.String()))
+}
+
+// captureWriter menampung keluaran Render tanpa mengirim ke klien (untuk
+// mengubah status 404 setelah halaman dirender).
+type captureWriter struct {
+	http.ResponseWriter
+	buf *bytes.Buffer
+}
+
+func (w *captureWriter) Write(b []byte) (int, error) { return w.buf.Write(b) }
+
+func (w *captureWriter) WriteHeader(int) {}
+
+// notFoundPage halaman 404 untuk route GET tak dikenal (XHR → JSON 404).
+func (s *Server) notFoundPage(w http.ResponseWriter, r *http.Request) {
+	s.renderNotFound(w, r)
+}
+
+// renderNotFound halaman 404 ber-Inertia (dipakai catch-all dan handler yang
+// menemukan resource hilang: produk/order/tiket).
+func (s *Server) renderNotFound(w http.ResponseWriter, r *http.Request) {
+	r = r.WithContext(inertia.SetTemplateDatum(r.Context(), "theme", storeTheme(s.DB)))
+	var buf bytes.Buffer
+	sw := &captureWriter{ResponseWriter: w, buf: &buf}
+	s.I.Render(sw, r, "Public/NotFound", inertia.Props{
+		"app_name": s.appName(),
+		"flash":    map[string]any{},
+	})
+	contentType := "text/html; charset=utf-8"
+	if r.Header.Get("X-Inertia") != "" || r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+		contentType = "application/json"
+	}
+	w.Header().Set("Content-Type", contentType)
+	w.WriteHeader(http.StatusNotFound)
+	_, _ = w.Write(buf.Bytes())
 }

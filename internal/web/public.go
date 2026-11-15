@@ -5,12 +5,15 @@ package web
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 
 	inertia "github.com/romsar/gonertia/v3"
+
+	"github.com/jhonoryza/go-self-digital-store/internal/auth"
 )
 
 // productData ringkasan produk untuk prop Inertia.
@@ -24,6 +27,7 @@ type productData struct {
 	Featured    bool     `json:"featured"`
 	Category    string   `json:"category,omitempty"`  // kategori opsional
 	Tags        []string `json:"tags,omitempty"`      // tag opsional (JSON di DB)
+	KeyStock    int      `json:"key_stock,omitempty"` // sisa stok kunci (type=key)
 	ImageURL    string   `json:"image_url,omitempty"` // gambar pertama (kartu katalog)
 	MetaTitle   string   `json:"meta_title,omitempty"`
 	MetaDesc    string   `json:"meta_description,omitempty"`
@@ -85,10 +89,18 @@ func (s *Server) landing(w http.ResponseWriter, r *http.Request) {
 	featured := scanCatalog(s.DB.Query(
 		`SELECT id, slug, title, description, price, type, featured, category, tags FROM products WHERE active=1 AND featured=1 ORDER BY id DESC LIMIT 6`))
 	s.attachFirstImages(r, featured)
+	s.attachKeyStock(featured)
+	seo := s.seoFor("seo.home.title", "seo.home.description")
 	s.Page(w, r, "Public/Landing", inertia.Props{
 		"featured": featured,
-		"seo":      s.seoFor("seo.home.title", "seo.home.description"),
-		"flash":    flashFromQuery(r),
+		"seo":      seo,
+		"og": map[string]any{
+			"title": s.ogFallback(seo, "seo.home.title", "Beranda - "+s.appName()),
+			"desc":  s.ogFallback(seo, "seo.home.description", "Produk digital siap unduh - terkirim otomatis ke email."),
+			"type":  "website",
+			"url":   s.publicOrigin(r),
+		},
+		"flash": flashFromQuery(r),
 	})
 }
 
@@ -232,7 +244,14 @@ func (s *Server) productsList(w http.ResponseWriter, r *http.Request) {
 	qargs := append(append([]any{}, args...), productsPerPage, (page-1)*productsPerPage)
 	products := scanCatalog(s.DB.Query(q, qargs...))
 	s.attachFirstImages(r, products)
+	seo := s.seoFor("seo.products.title", "seo.products.description")
 	s.Page(w, r, "Public/Products", inertia.Props{
+		"og": map[string]any{
+			"title": s.ogFallback(seo, "seo.products.title", "Semua Produk - "+s.appName()),
+			"desc":  s.ogFallback(seo, "seo.products.description", "Produk digital siap unduh - terkirim otomatis ke email."),
+			"type":  "website",
+			"url":   s.publicOrigin(r) + "/produk",
+		},
 		"products":   products,
 		"page":       page,
 		"last_page":  lastPage,
@@ -254,19 +273,58 @@ func (s *Server) productDetail(w http.ResponseWriter, r *http.Request) {
 		Scan(&p.ID, &p.Slug, &p.Title, &p.Description, &p.Price, &p.Type, &p.Featured, &p.MetaTitle, &p.MetaDesc, &p.Category, &tagsJSON)
 	p.Tags = parseTagsJSON(tagsJSON)
 	if err == sql.ErrNoRows {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	} else if err != nil {
 		logErr("produk %s: %v", r.PathValue("slug"), err)
 		http.Error(w, "kesalahan server", http.StatusInternalServerError)
 		return
 	}
-	s.Page(w, r, "Public/ProductDetail", inertia.Props{
-		"product": p,
-		"images":  s.productImagesOf(r, p.ID),
-		"seo":     s.seoFor("seo.product.title", "seo.product.description"),
-		"flash":   flashFromQuery(r),
-	})
+	productImages := s.productImagesOf(r, p.ID)
+	if p.Type == "key" {
+		p.KeyStock = s.keyStocks([]int64{p.ID})[p.ID]
+	}
+	// produk terkait: satu kategori, fallback terbaru lain
+	related := scanCatalog(s.DB.Query(
+		`SELECT id, slug, title, description, price, type, featured, category, tags FROM products
+		 WHERE active=1 AND id != ? AND (category != '' AND category = ? OR category = '') ORDER BY category != '' DESC, id DESC LIMIT 4`, p.ID, p.Category))
+	s.attachFirstImages(r, related)
+	s.attachKeyStock(related)
+	seo := s.seoFor("seo.product.title", "seo.product.description")
+	origin := s.publicOrigin(r)
+	pageURL := origin + "/produk/" + p.Slug
+	og := map[string]any{
+		"title": p.MetaTitle,
+		"desc":  p.MetaDesc,
+		"type":  "product",
+		"url":   pageURL,
+	}
+	if og["title"] == "" {
+		og["title"] = fmt.Sprintf("%s - %s", p.Title, rupiah(p.Price))
+	}
+	if og["desc"] == "" {
+		og["desc"] = truncate(p.Description, 160)
+	}
+	if len(productImages) > 0 {
+		og["image"] = productImages[0].URL
+	}
+	reviews, ratingAvg, ratingCount := s.productReviews(p.ID)
+	props := inertia.Props{
+		"product":      p,
+		"images":       productImages,
+		"related":      related,
+		"reviews":      reviews,
+		"rating_avg":   ratingAvg,
+		"rating_count": ratingCount,
+		"seo":          seo,
+		"og":           og,
+		"share_url":    pageURL,
+		"flash":        flashFromQuery(r),
+	}
+	if u, _, ok := auth.Resolve(s.DB, r); ok {
+		props["can_review"], _ = s.reviewEntitlement(p.ID, u.ID, u.Email)
+	}
+	s.Page(w, r, "Public/ProductDetail", props)
 }
 
 // healthz probe hidup + DB.
@@ -290,4 +348,57 @@ func flashFromQuery(r *http.Request) map[string]string {
 		f["err"] = v
 	}
 	return f
+}
+
+// ogFallback nilai og dari settings SEO, dengan fallback bila kosong.
+func (s *Server) ogFallback(seo map[string]string, key, fallback string) string {
+	if v := seo[key]; v != "" {
+		return v
+	}
+	return fallback
+}
+
+// attachKeyStock isi KeyStock tiap produk type=key (batch satu query).
+func (s *Server) attachKeyStock(products []productData) {
+	stok := s.keyStocks(mapToIDs(products))
+	for i := range products {
+		if products[i].Type == "key" {
+			products[i].KeyStock = stok[products[i].ID]
+		}
+	}
+}
+
+func mapToIDs(products []productData) []int64 {
+	ids := make([]int64, 0, len(products))
+	for _, p := range products {
+		ids = append(ids, p.ID)
+	}
+	return ids
+}
+
+// keyStocks sisa kunci tersedia (belum terjual) per produk.
+func (s *Server) keyStocks(ids []int64) map[int64]int {
+	out := map[int64]int{}
+	if len(ids) == 0 {
+		return out
+	}
+	ph := strings.TrimRight(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := s.DB.Query(`SELECT product_id, COUNT(*) FROM license_keys
+		WHERE order_item_id IS NULL AND product_id IN (`+ph+`) GROUP BY product_id`, args...)
+	if err != nil {
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var pid int64
+		var n int
+		if rows.Scan(&pid, &n) == nil {
+			out[pid] = n
+		}
+	}
+	return out
 }
