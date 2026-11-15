@@ -35,8 +35,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     ["/admin/setting", "Setting"],
   ] as const;
 
-  // tab aktif: sama persis atau halaman detail di bawahnya (/admin/orders/{no})
-  const aktif = (href: string) => url === href || url.startsWith(href + "/") || (href !== "/admin" && url.startsWith(href));
+  // tab aktif: "/admin" (dashboard) hanya persis; tab lain juga mencakup
+  // halaman detail di bawahnya (/admin/orders/{no})
+  const aktif = (href: string) =>
+    href === "/admin" ? url === "/admin" : url === href || url.startsWith(href + "/");
 
   const moreItems = [
     { href: "/admin/tiket", label: "Tiket", Icon: LifeBuoy },

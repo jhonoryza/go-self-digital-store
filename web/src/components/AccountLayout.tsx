@@ -20,7 +20,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
   ] as const;
 
   // tab aktif: sama persis atau halaman detail di bawahnya (/pesanan/{no})
-  const aktif = (href: string) => url === href || url.startsWith(href + "/") || (href !== "/" && url.startsWith(href));
+  const aktif = (href: string) => url === href || url.startsWith(href + "/");
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 pb-16 text-zinc-900 sm:pb-0 dark:bg-zinc-950 dark:text-zinc-100">

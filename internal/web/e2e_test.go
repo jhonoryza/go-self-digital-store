@@ -1896,6 +1896,20 @@ func TestE2EAdminLists(t *testing.T) {
 		t.Errorf("orders last_page/total = %v/%v, mau 1/5", prop(t, page)["last_page"], prop(t, page)["total"])
 	}
 
+	// detail order admin: created_at terisi (regresi "Dibuat:" kosong) dan
+	// item tampil setelah order_items diisi
+	d.Exec(`INSERT INTO order_items (order_id, product_id, title, price, qty)
+		SELECT o.id, p.id, p.title, 100000, 1 FROM orders o, products p
+		WHERE o.order_no='ORD-A1' AND p.slug='adm-01'`)
+	page = doPage(t, admin, ts.URL+"/admin/orders/ORD-A1")
+	od := prop(t, page)["order"].(map[string]any)
+	if od["created_at"] == "" {
+		t.Error("detail order admin: created_at kosong")
+	}
+	if items, ok := od["items"].([]any); !ok || len(items) != 1 {
+		t.Errorf("detail order admin items = %v, mau 1", od["items"])
+	}
+
 	// ---- admin/tiket: filter status + search + sort ----
 	var bossID int64
 	d.QueryRow(`SELECT id FROM users WHERE email='boss@uji.id'`).Scan(&bossID)

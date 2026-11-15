@@ -201,8 +201,8 @@ type orderOutRow struct {
 func (s *Server) loadOrder(orderNo string) (orderData, bool) {
 	var o orderData
 	var id int64
-	err := s.DB.QueryRow(`SELECT id, order_no, email, status, subtotal, discount, coupon_code, total, pay_url, pay_ref, pay_provider, COALESCE(paid_at,'') FROM orders WHERE order_no=?`, orderNo).
-		Scan(&id, &o.OrderNo, &o.Email, &o.Status, &o.Subtotal, &o.Discount, &o.Coupon, &o.Total, &o.PayURL, &o.PayRef, &o.Provider, &o.PaidAt)
+	err := s.DB.QueryRow(`SELECT id, order_no, email, status, subtotal, discount, coupon_code, total, pay_url, pay_ref, pay_provider, created_at, COALESCE(paid_at,'') FROM orders WHERE order_no=?`, orderNo).
+		Scan(&id, &o.OrderNo, &o.Email, &o.Status, &o.Subtotal, &o.Discount, &o.Coupon, &o.Total, &o.PayURL, &o.PayRef, &o.Provider, &o.CreatedAt, &o.PaidAt)
 	if err != nil {
 		return o, false
 	}
