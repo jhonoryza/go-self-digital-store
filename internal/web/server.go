@@ -6,6 +6,7 @@ package web
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	neturl "net/url"
@@ -188,6 +189,13 @@ func (s *Server) routes() {
 	// gambar produk dari bucket R2 (proxy bila tanpa domain publik)
 	m.HandleFunc("GET /images/{key...}", s.productImageProxy)
 
+	// PWA: manifest dinamis (nama toko + warna tema aktif), service worker,
+	// offline fallback, dan ikon
+	m.HandleFunc("GET /manifest.webmanifest", s.manifestWebmanifest)
+	m.HandleFunc("GET /sw.js", s.serveDistFile("sw.js", "text/javascript; charset=utf-8"))
+	m.HandleFunc("GET /offline.html", s.serveDistFile("offline.html", "text/html; charset=utf-8"))
+	m.HandleFunc("GET /icons/{name}", s.serveIcons)
+
 	// catch-all GET terakhir: route GET tak dikenal → halaman 404 ber-Inertia.
 	// Pola spesifik tetap menang (presedensi mux) dan mismatch method tetap 405.
 	m.HandleFunc("GET /{path...}", s.notFoundPage)
@@ -325,4 +333,77 @@ func (s *Server) renderNotFound(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(http.StatusNotFound)
 	_, _ = w.Write(buf.Bytes())
+}
+
+// themeHex warna brand-600 per tema toko (cermin override app.css).
+var themeHex = map[string]string{
+	"":          "#277758",
+	"brutalism": "#4d7c0f",
+	"neon":      "#c026d3",
+	"pastel":    "#7c3aed",
+	"terminal":  "#059669",
+	"ocean":     "#2563eb",
+}
+
+// manifestWebmanifest webmanifest dinamis: nama toko dari setting, warna
+// mengikuti tema aktif.
+func (s *Server) manifestWebmanifest(w http.ResponseWriter, r *http.Request) {
+	theme := storeTheme(s.DB)
+	themeColor := themeHex[theme]
+	if themeColor == "" {
+		themeColor = themeHex[""]
+	}
+	manifest := map[string]any{
+		"name":             s.appName(),
+		"short_name":       s.appName(),
+		"description":      "Toko produk digital - terkirim otomatis ke email setelah lunas.",
+		"start_url":        "/",
+		"scope":            "/",
+		"display":          "standalone",
+		"background_color": "#09090b",
+		"theme_color":      themeColor,
+		"icons": []map[string]any{
+			{"src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+			{"src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+			{"src": "/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+			{"src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+		},
+	}
+	w.Header().Set("Content-Type", "application/manifest+json; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	_ = json.NewEncoder(w).Encode(manifest)
+}
+
+// serveIcons berkas ikon PWA dari hasil build Vite (web/public disalin).
+func (s *Server) serveIcons(w http.ResponseWriter, r *http.Request) {
+	name := filepath.Clean(r.PathValue("name"))
+	if strings.Contains(name, "..") || !strings.HasSuffix(name, ".png") {
+		http.NotFound(w, r)
+		return
+	}
+	b, err := os.ReadFile(filepath.Join("web", "dist", "icons", name))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=31556952, immutable")
+	_, _ = w.Write(b)
+}
+
+// serveDistFile sajikan satu berkas statis dari akar web/dist (sw.js,
+// offline.html) tanpa menyentuh shell.
+func (s *Server) serveDistFile(name, contentType string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		b, err := os.ReadFile(filepath.Join("web", "dist", filepath.Clean(name)))
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", contentType)
+		if name == "sw.js" {
+			w.Header().Set("Cache-Control", "no-cache")
+		}
+		_, _ = w.Write(b)
+	}
 }

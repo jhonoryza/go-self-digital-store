@@ -19,6 +19,7 @@ export default function Register() {
             id="name"
             className="w-full rounded-lg border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800"
             value={form.data.name}
+            autoComplete="name"
             onChange={(e) => form.setData("name", e.target.value)}
             required
             autoFocus
@@ -32,6 +33,7 @@ export default function Register() {
             type="email"
             className="w-full rounded-lg border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800"
             value={form.data.email}
+            autoComplete="email"
             onChange={(e) => form.setData("email", e.target.value)}
             required
           />

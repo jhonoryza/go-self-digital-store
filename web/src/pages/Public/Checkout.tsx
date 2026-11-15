@@ -51,7 +51,8 @@ export default function Checkout({ auth_user }: SharedProps) {
                 className="w-full rounded-lg border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800"
                 placeholder="nama@email.com"
                 value={form.data.email}
-                onChange={(e) => form.setData("email", e.target.value)}
+                autoComplete="email"
+            onChange={(e) => form.setData("email", e.target.value)}
                 required
               />
               {form.errors.email && <p className="mt-1 text-sm text-red-600">{form.errors.email}</p>}

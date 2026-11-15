@@ -41,6 +41,7 @@ export default function Profile({ auth_user }: Props) {
             type="email"
             className="w-full rounded-lg border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800"
             value={profile.data.email}
+            autoComplete="email"
             onChange={(e) => profile.setData("email", e.target.value)}
             required
           />

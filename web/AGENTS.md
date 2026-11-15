@@ -20,6 +20,9 @@ bun. Deploy: shell statis + aset di Cloudflare Pages; lokal: `bun run dev`
   manual** di callback children (callback kustom menonaktifkan layout bawaan
   App); `CsrfSync` menyinkronkan token CSRF props → interceptor.
 - `src/types.ts` — SharedProps + helper `rupiah` (cermin helper Go).
+- Mobile & PWA: `min-h-dvh` di semua shell; guard zoom iOS (input ≥16px
+  ≤sm di app.css); manifest dinamis + sw.js dari `web/public/` (disalin
+  Vite ke dist); offline fallback `/offline.html`.
 - Tema toko: `SharedProps.theme` disinkronkan `ThemeSync` (app.tsx) ke
   `<html data-theme>`; 5 tema + bawaan didefinisikan sebagai override
   `--color-brand-*` + estetika di `src/css/app.css` (brutalism/neon/pastel/

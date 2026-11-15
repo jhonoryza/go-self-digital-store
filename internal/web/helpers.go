@@ -93,6 +93,9 @@ func (s *Server) Page(w http.ResponseWriter, r *http.Request, component string, 
 	theme := storeTheme(s.DB)
 	r = r.WithContext(inertia.SetTemplateDatum(r.Context(), "theme", theme))
 	props["theme"] = theme
+	if c := themeHex[theme]; c != "" {
+		r = r.WithContext(inertia.SetTemplateDatum(r.Context(), "themeColor", c))
+	}
 	// OG tags harus server-rendered agar terbaca crawler/preview WhatsApp;
 	// handler mengirim props["og"] = map{title,desc,image,url,type}
 	if og, ok := props["og"].(map[string]any); ok {

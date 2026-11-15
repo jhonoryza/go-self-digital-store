@@ -4,26 +4,7 @@ import { useRef, useState, type ReactNode } from "react";
 import AdminLayout from "../../components/AdminLayout";
 import FilterPanel from "../../components/FilterPanel";
 import { useInfiniteList } from "../../lib/infinite";
-import { rupiah, type ProductImage, type SharedProps } from "../../types";
-
-interface Product {
-  id: number;
-  slug: string;
-  title: string;
-  description: string;
-  price: number;
-  type: string;
-  featured: boolean;
-  active: boolean;
-  file_path: string;
-  file_name: string;
-  ext_url: string;
-  key_count: number;
-  meta_title: string;
-  meta_description: string;
-  category?: string;
-  tags?: string[];
-}
+import { rupiah, type AdminProduct, type ProductImage, type SharedProps } from "../../types";
 
 interface Filters {
   q?: string;
@@ -34,7 +15,7 @@ interface Filters {
 }
 
 interface Props extends SharedProps {
-  products: Product[];
+  products: AdminProduct[];
   // peta product_id (string) -> daftar gambar dari bucket R2
   images: Record<string, ProductImage[]>;
   page: number;
@@ -228,7 +209,7 @@ function ProductForm({
   onDone,
 }: {
   title: string;
-  product: Product | null;
+  product: AdminProduct | null;
   images?: ProductImage[];
   onDone: () => void;
 }) {
@@ -399,12 +380,35 @@ function ProductForm({
 AdminProducts.layout = (page: ReactNode) => <AdminLayout>{page}</AdminLayout>;
 
 // ImageManager kelola gambar produk di bucket R2 (maks 5, jpg/png/webp, 2 MB).
+// resizeImage perkecil gambar di sisi klien (sisi panjang maks 1200px,
+// konversi WebP) sebelum diunggah - hemat bandwidth dan mempercepat katalog.
+// Gagal (mis. format tak didukung) mengembalikan berkas asli.
+async function resizeImage(file: File, maxDim = 1200, quality = 0.85): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+    if (scale >= 1 && file.size < 500_000) return file; // sudah kecil
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/webp", quality));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, "") + ".webp", { type: "image/webp" });
+  } catch {
+    return file;
+  }
+}
+
 function ImageManager({ productId, images }: { productId: number; images: ProductImage[] }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const remaining = MAX_IMAGES - images.length;
 
-  const upload = () => {
+  const upload = async () => {
     const files = inputRef.current?.files;
     if (!files || files.length === 0) return;
     if (files.length > remaining) {
@@ -418,8 +422,10 @@ function ImageManager({ productId, images }: { productId: number; images: Produc
       }
     }
     const fd = new FormData();
-    for (const f of files) fd.append("images", f);
     setBusy(true);
+    for (const f of files) fd.append("images", await resizeImage(f));
+    setBusy(false);
+    if (fd.getAll("images").length === 0) return;
     router.post(`/admin/produk/${productId}/images`, fd, {
       onSuccess: () => {
         if (inputRef.current) inputRef.current.value = "";

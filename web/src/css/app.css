@@ -9,6 +9,16 @@
   color: var(--color-zinc-400);
 }
 
+/* iOS otomatis memperbesar halaman saat fokus input ber-font <16px —
+   paksa 16px di layar sentuh kecil agar tidak ada zoom tak terduga */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 1rem !important;
+  }
+}
+
 /* keluarga huruf dasar seluruh app */
 html {
   font-family: var(--font-sans);

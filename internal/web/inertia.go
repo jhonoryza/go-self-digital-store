@@ -34,6 +34,12 @@ const rootTemplate = `<!DOCTYPE html>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title inertia>{{ .appName }}</title>
+<link rel="manifest" href="/manifest.webmanifest"/>
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png"/>
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="{{ .themeColor }}"/>
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#09090b"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <script>
 // tema diputuskan sebelum paint agar tak berkedip; default gelap,
 // pilihan user (localStorage) menang.
@@ -56,7 +62,7 @@ const rootTemplate = `<!DOCTYPE html>
 {{ if .ogImage }}<meta property="og:image" content="{{ .ogImage }}"/>{{ end }}{{ end }}
 {{ .inertiaHead }}
 </head>
-<body>{{ .inertia }}</body>
+<body>{{ .inertia }}{{ if not .hmr }}<script>if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); }); }</script>{{ end }}</body>
 </html>
 `
 
@@ -113,6 +119,7 @@ func NewInertia(cfg config.Config) (*inertia.Inertia, string) {
 	}
 	i.ShareTemplateData("appName", cfg.AppName)
 	i.ShareTemplateData("theme", "") // ditimpa per-request di Page()
+	i.ShareTemplateData("themeColor", "#277758")
 
 	assets := resolveAssets()
 	i.ShareTemplateData("appJS", assets.JS)

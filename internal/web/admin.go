@@ -381,7 +381,7 @@ func (s *Server) adminOrderResend(w http.ResponseWriter, r *http.Request, u auth
 func (s *Server) adminOrderDetail(w http.ResponseWriter, r *http.Request, u auth.User) {
 	o, ok := s.loadOrder(r.PathValue("order_no"))
 	if !ok {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	s.Page(w, r, "Admin/OrderDetail", inertia.Props{
@@ -550,7 +550,7 @@ func (s *Server) adminProductSave(w http.ResponseWriter, r *http.Request, u auth
 		var err error
 		id, err = pathInt(raw)
 		if err != nil {
-			http.NotFound(w, r)
+			s.renderNotFound(w, r)
 			return
 		}
 	}
@@ -585,26 +585,31 @@ func (s *Server) adminProductSave(w http.ResponseWriter, r *http.Request, u auth
 		errs["ext_url"] = "tautan wajib untuk produk link"
 	}
 
-	// unggahan berkas (opsional pada update, wajib di create type=file)
+	// unggahan berkas (opsional pada update, wajib di create type=file):
+	// utamakan R2 (presigned saat diunduh), fallback disk lokal
 	var savedPath, savedName string
 	file, header, ferr := r.FormFile("file")
 	if ferr == nil {
 		defer file.Close()
 		ext := filepath.Ext(header.Filename)
 		name := hex.EncodeToString(randomBytes(8)) + ext
-		dst := filepath.Join(s.filesDir(), name)
-		if err := os.MkdirAll(s.filesDir(), 0o755); err != nil {
-			jsonError(w, http.StatusInternalServerError, "kesalahan server")
-			return
-		}
-		out, err := os.Create(dst)
-		if err == nil {
-			if _, err := io.Copy(out, file); err == nil {
-				out.Close()
-				savedPath, savedName = name, filepath.Base(header.Filename)
-			} else {
-				out.Close()
-				os.Remove(dst)
+		if s.putProductFile(name, header.Header.Get("Content-Type"), file) {
+			savedPath, savedName = name, filepath.Base(header.Filename)
+		} else {
+			dst := filepath.Join(s.filesDir(), name)
+			if err := os.MkdirAll(s.filesDir(), 0o755); err != nil {
+				jsonError(w, http.StatusInternalServerError, "kesalahan server")
+				return
+			}
+			out, err := os.Create(dst)
+			if err == nil {
+				if _, err := io.Copy(out, file); err == nil {
+					out.Close()
+					savedPath, savedName = name, filepath.Base(header.Filename)
+				} else {
+					out.Close()
+					os.Remove(dst)
+				}
 			}
 		}
 	}
@@ -639,7 +644,7 @@ func (s *Server) adminProductSave(w http.ResponseWriter, r *http.Request, u auth
 		var old string
 		s.DB.QueryRow(`SELECT file_path FROM products WHERE id=?`, id).Scan(&old)
 		if old != "" && old != savedPath {
-			os.Remove(filepath.Join(s.filesDir(), old))
+			s.hapusProductFile(old)
 		}
 		s.DB.Exec(`UPDATE products SET slug=?, title=?, description=?, price=?, type=?, featured=?, active=?, file_path=?, file_name=?, ext_url=?, category=?, tags=?, updated_at=datetime('now') WHERE id=?`,
 			slug, title, description, price, ptype, boolInt(featured), boolInt(active), savedPath, savedName, extURL, category, tagsJSON, id)
@@ -668,12 +673,12 @@ func boolInt(b bool) int {
 func (s *Server) adminProductKeys(w http.ResponseWriter, r *http.Request, u auth.User) {
 	id, err := pathInt(r.PathValue("id"))
 	if err != nil {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	var slug string
 	if err := s.DB.QueryRow(`SELECT slug FROM products WHERE id=?`, id).Scan(&slug); err != nil {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	keys := strings.Split(strings.ReplaceAll(r.PostFormValue("keys"), "\r\n", "\n"), "\n")
@@ -692,7 +697,7 @@ func (s *Server) adminProductKeys(w http.ResponseWriter, r *http.Request, u auth
 func (s *Server) adminProductToggle(w http.ResponseWriter, r *http.Request, u auth.User) {
 	id, err := pathInt(r.PathValue("id"))
 	if err != nil {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	s.DB.Exec(`UPDATE products SET active = 1 - active, updated_at=datetime('now') WHERE id=?`, id)
@@ -802,7 +807,7 @@ func (s *Server) adminTickets(w http.ResponseWriter, r *http.Request, u auth.Use
 func (s *Server) adminTicketDetailPage(w http.ResponseWriter, r *http.Request, u auth.User) {
 	id, err := pathInt(r.PathValue("id"))
 	if err != nil {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	var t ticketData
@@ -812,7 +817,7 @@ func (s *Server) adminTicketDetailPage(w http.ResponseWriter, r *http.Request, u
 		FROM tickets t JOIN users u ON u.id=t.user_id WHERE t.id=?`, id).
 		Scan(&t.ID, &owner, &t.OrderNo, &t.Subject, &t.Status, &t.CreatedAt, &t.UpdatedAt, &ownerEmail)
 	if err != nil {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	msgs, _ := s.DB.Query(`SELECT id, sender, body, created_at FROM ticket_messages WHERE ticket_id=? ORDER BY id`, id)
@@ -832,7 +837,7 @@ func (s *Server) adminTicketDetailPage(w http.ResponseWriter, r *http.Request, u
 func (s *Server) adminTicketReply(w http.ResponseWriter, r *http.Request, u auth.User) {
 	id, err := pathInt(r.PathValue("id"))
 	if err != nil {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	body := strings.TrimSpace(r.PostFormValue("body"))
@@ -850,7 +855,7 @@ func (s *Server) adminTicketReply(w http.ResponseWriter, r *http.Request, u auth
 func (s *Server) adminTicketClose(w http.ResponseWriter, r *http.Request, u auth.User) {
 	id, err := pathInt(r.PathValue("id"))
 	if err != nil {
-		http.NotFound(w, r)
+		s.renderNotFound(w, r)
 		return
 	}
 	s.DB.Exec(`UPDATE tickets SET status='closed', updated_at=datetime('now') WHERE id=?`, id)

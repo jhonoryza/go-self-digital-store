@@ -20,6 +20,7 @@ export default function Login() {
             type="email"
             className="w-full rounded-lg border-zinc-300 dark:border-zinc-700 dark:bg-zinc-800"
             value={form.data.email}
+            autoComplete="email"
             onChange={(e) => form.setData("email", e.target.value)}
             required
             autoFocus

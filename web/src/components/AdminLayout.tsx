@@ -49,7 +49,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   ] as const;
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-100 pb-16 text-zinc-900 sm:pb-0 dark:bg-zinc-950 dark:text-zinc-100">
+    <div className="flex min-h-dvh flex-col bg-zinc-100 pb-16 text-zinc-900 sm:pb-0 dark:bg-zinc-950 dark:text-zinc-100">
       <FlashToast />
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">

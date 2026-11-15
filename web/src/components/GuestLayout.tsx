@@ -53,7 +53,7 @@ export default function GuestLayout({ children }: { children: ReactNode }) {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 pb-16 text-zinc-900 sm:pb-0 dark:bg-zinc-950 dark:text-zinc-100">
+    <div className="flex min-h-dvh flex-col bg-zinc-50 pb-16 text-zinc-900 sm:pb-0 dark:bg-zinc-950 dark:text-zinc-100">
       <FlashToast />
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
